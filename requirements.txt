@@ -1,0 +1,11 @@
+awscli
+boto3
+cv2
+json
+jsonschema
+nose
+os
+pims
+psycopg2
+testfixtures
+sqlalchemy
