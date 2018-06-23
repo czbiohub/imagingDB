@@ -1,5 +1,4 @@
 # Imaging Database
-===================
 
 This is a pipeline for interacting with images and their metadata using the imaging database.
 Current development focus is uploading images and metadata to the database,
@@ -23,7 +22,7 @@ You will need to have a biohub AWS account and to configure your AWS CLI with yo
 ```
 aws configure
 ```
-#### The database lives in an AWS PostreSQL RDS
+#### The database lives in an AWS PostgreSQL RDS
 You will need to be added as a user there too, and add your username and password in a json file
 for database access (see db_credentials.json)
 

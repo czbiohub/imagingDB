@@ -5,6 +5,7 @@ json
 jsonschema
 nose
 os
+pandas
 pims
 psycopg2
 testfixtures
