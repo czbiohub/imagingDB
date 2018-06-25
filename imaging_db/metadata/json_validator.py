@@ -9,10 +9,48 @@ CREDENTIALS_SCHEMA = {
         "username": {"type": "string"},
         "password": {"type": "string"},
         "host": {"type": "string"},
-        "port": {"type": "number"},
+        "port": {"type": "integer"},
         "dbname": {"type": "string"},
     },
 }
+
+# More Micromanager metadata properties should be added
+# Ask Kevin which ones are required
+MICROMETA_SCHEMA = {
+    "type" : "object",
+    "properties" : {
+        "ChannelIndex": {"type": "integer"},
+        "Slice": {"type": "integer"},
+        "Exposure-ms": {"type": "number"},
+        "XResolution": {"type": "number"},
+        "YResolution": {"type": "number"},
+    },
+}
+
+
+def validate_schema(json_object, schema_name):
+    """
+    Validate JSON object against predefined schema.
+
+    :param json json_object:
+    :param str schema_name: Name of schema defined in this file
+        current options are:
+        CREDENTIALS_SCHEMA: database credentials (and AWS in future?)
+        MICROMETA_SCHEMA: MicroManager metadata from ome.tif files
+    :return:
+    """
+    # Assign schema from schema name
+    try:
+        schema_object = globals()[schema_name]
+    except KeyError as keye:
+        print(keye)
+        raise
+    # Validate json schema
+    try:
+        jsonschema.validate(json_object, schema_object)
+    except jsonschema.exceptions.ValidationError as e:
+        print(str(e))
+        raise
 
 
 def read_json_file(json_filename, schema_name=None):
@@ -44,17 +82,6 @@ def read_json_file(json_filename, schema_name=None):
         raise
     # Validate schema
     if schema_name is not None:
-        # Assign schema from schema name
-        try:
-            schema_object = globals()[schema_name]
-        except KeyError as keye:
-            print(keye)
-            raise
-        # Validate json schema
-        try:
-            jsonschema.validate(json_object, schema_object)
-        except jsonschema.exceptions.ValidationError as e:
-            print(str(e))
-            raise
+        validate_schema(json_object, schema_name)
 
     return json_object

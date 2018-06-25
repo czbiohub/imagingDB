@@ -1,11 +1,23 @@
-import cv2
 import numpy as np
+import pandas as pd
 import pims
 import re
+
+import imaging_db.metadata.json_validator as json_validator
+
+MICROMETA_NAMES = ["ChannelIndex",
+                   "Slice",
+                   "Exposure-ms",
+                   "XResolution",
+                   "YResolution",
+                   "ResolutionUnit",
+                   "MicroManagerMetadata"]
 
 
 def get_image_description(image_str):
     """
+    Update: make this obsolete and rely on MicroManagerMetadata instead
+
     It seems the only way to get key image organization parameters is in a
     weird ImageJ ImageDescription1 tag which is a string...
     Is this really how image descriptors are stored in all ome-tif files?
@@ -15,7 +27,7 @@ def get_image_description(image_str):
     :return int nbr_slices: number of slices
     :return str slice_order: string describing how slices are ordered,
         e.g. 'zct'
-    Note: there is no parameter describing time here, does it show up for time series?
+    Note: What permutations of order are possible?
     """
     str_list = image_str.split()
     # Find channels
@@ -41,28 +53,55 @@ def read_ome_tiff(file_name):
     :return:
     """
     frames = pims.TiffStack(file_name)
-    # Get the first frame, slice information should be contained there
-    frame0 = frames._tiff[0]
-    # Get image order from weird string
-    nbr_channels, nbr_slices, slice_order = get_image_description(
-        frame0.tags['ImageDescription1'].value)
+    # Get global metadata
+    frame_shape = frames.frame_shape
     global_metadata = {
-        "nbr_frames": len(frames)
-        "im_width": frame0.tags['ImageWidth'].value,
-        "im_height": frame0.tags['ImageLength'].value,
-        "bit_depth": frame0.tags['BitsPerSample'].value,
-        "nbr_channels": nbr_channels,
-        "nbr_slices": nbr_slices,
-        "slice_order": slice_order,
+        "nbr_frames": len(frames),
+        "im_width": frame_shape[0],
+        "im_height": frame_shape[1],
+        "bit_depth": str(frames.pixel_type),
     }
     # Create image stack with image bit depth 16 or 8
-    imtype = np.uint16
-    if global_metadata["bit_depth"] == 8:
-        imtype = np.uint8
-    im_stack = np.empty((global_metadata["im_width"],
-                         global_metadata["im_height"],
+    im_stack = np.empty((frame_shape[0],
+                         frame_shape[0],
                          global_metadata["nbr_frames"]),
-                        dtype=imtype)
-    # Convert frames to numpy stack
-    for im_nbr in range(global_metadata["nbr_frames"]):
-        im_stack[:,:, im_nbr] = frames._tiff[im_nbr]
+                        dtype=frames.pixel_type)
+
+    # Convert frames to numpy stack and collect metadata
+    # Separate structure metadata (with known fields)
+    # from unstructured, which goes in last column
+    metadata = pd.DataFrame(
+        index=range(global_metadata["nbr_frames"]),
+        columns=MICROMETA_NAMES)
+    micrometa = []
+    for i, im_nbr in enumerate(range(global_metadata["nbr_frames"])):
+        frame = frames._tiff[im_nbr]
+        im_stack[:, :, im_nbr] = frame.asarray()
+        # Starting with just MicroManager meta for now
+        # it seems to contain the juciest data
+        micromanager_meta = frame.tags["MicroManagerMetadata"].value
+        # Validate metadata
+        json_validator.validate_schema(micromanager_meta, "MICROMETA_SCHEMA")
+        # Add structured metadata and Micromanager metadata to dataframe
+        row = []
+        # First three names come from micrometa
+        for meta_name in MICROMETA_NAMES[:3]:
+            row.append(micromanager_meta[meta_name])
+        # Last three are from other tags
+        # XResolution, YResolution, ResolutionUnit
+        row.append(frame.tags[MICROMETA_NAMES[3]].value[0])
+        row.append(frame.tags[MICROMETA_NAMES[4]].value[0])
+        row.append(str(frame.tags[MICROMETA_NAMES[5]].value))
+        row.append(micromanager_meta)
+        # Insert row in dataframe
+        metadata.loc[i] = row
+    return im_stack, metadata
+
+
+
+
+
+
+
+
+
