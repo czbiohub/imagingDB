@@ -3,8 +3,8 @@ import jsonschema
 
 
 CREDENTIALS_SCHEMA = {
-    "type" : "object",
-    "properties" : {
+    "type": "object",
+    "properties": {
         "drivername": {"type": "string"},
         "username": {"type": "string"},
         "password": {"type": "string"},
@@ -12,19 +12,20 @@ CREDENTIALS_SCHEMA = {
         "port": {"type": "integer"},
         "dbname": {"type": "string"},
     },
+    "required": ["drivername", "username", "password", "host", "port", "dbname"],
 }
 
 # More Micromanager metadata properties should be added
 # Ask Kevin which ones are required
 MICROMETA_SCHEMA = {
-    "type" : "object",
-    "properties" : {
+    "type": "object",
+    "properties": {
         "ChannelIndex": {"type": "integer"},
         "Slice": {"type": "integer"},
+        "FrameIndex": {"type": "integer"},
         "Exposure-ms": {"type": "number"},
-        "XResolution": {"type": "number"},
-        "YResolution": {"type": "number"},
     },
+    "required": ["ChannelIndex", "Slice", "FrameIndex", "Exposure-ms"]
 }
 
 

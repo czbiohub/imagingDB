@@ -3,6 +3,8 @@
 import argparse
 import os
 
+import imaging_db.cli.cli_utils as cli_utils
+import imaging_db.database.db_session as db_session
 import imaging_db.images.file_slicer as file_slicer
 
 
@@ -14,8 +16,10 @@ def parse_args():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--file', type=str, help="Full path to file")
+    parser.add_argument('--config', type=str,
+                        help="Full path to JSON config file with login info")
     parser.add_argument('--id', type=str, help="Unique file ID, " \
-                        "<ID>-YYYY-MM-DD-HH-<SSSS>")
+                        "<ID>-YYYY-MM-DD-HH-MM-SS-<SSSS>")
     parser.add_argument('--meta', type=str, default="None",
                         help="Pass in metadata. Currently not supported")
 
@@ -31,8 +35,16 @@ def slice_and_upload(args):
         str file:  Full path to input file that also has metadata
         str id: Unique file ID <ID>-YYYY-MM-DD-HH-<SSSS>
     """
+    # Assert that ID is correctly formatted
+    try:
+        cli_utils.validate_id(args.id)
+    except AssertionError as e:
+        print("Invalid ID:", e)
     # Get image stack and metadata
     im_stack, metadata = file_slicer.read_ome_tiff(args.file)
+
+    # Start DB session
+    session = db_session.start_session(args.config, echo_sql=True)
 
 
 if __name__ == '__main__':

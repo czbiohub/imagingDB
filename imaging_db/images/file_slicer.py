@@ -7,11 +7,13 @@ import imaging_db.metadata.json_validator as json_validator
 
 MICROMETA_NAMES = ["ChannelIndex",
                    "Slice",
+                   "FrameIndex",
                    "Exposure-ms",
                    "XResolution",
                    "YResolution",
                    "ResolutionUnit",
-                   "MicroManagerMetadata"]
+                   "MicroManagerMetadata",
+                   "FileName"]
 
 
 def get_image_description(image_str):
@@ -84,14 +86,18 @@ def read_ome_tiff(file_name):
         json_validator.validate_schema(micromanager_meta, "MICROMETA_SCHEMA")
         # Add structured metadata and Micromanager metadata to dataframe
         row = []
-        # First three names come from micrometa
-        for meta_name in MICROMETA_NAMES[:3]:
+        # First four names come from micrometa
+        for meta_name in MICROMETA_NAMES[:4]:
             row.append(micromanager_meta[meta_name])
         # Last three are from other tags
         # XResolution, YResolution, ResolutionUnit
         row.append(frame.tags[MICROMETA_NAMES[3]].value[0])
         row.append(frame.tags[MICROMETA_NAMES[4]].value[0])
         row.append(str(frame.tags[MICROMETA_NAMES[5]].value))
+        # Create a file name and add it
+        row.append("im_channel{}_slice{}_frame{}.png".format(
+            row[:3]
+        ))
         row.append(micromanager_meta)
         # Insert row in dataframe
         metadata.loc[i] = row
