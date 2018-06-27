@@ -30,7 +30,7 @@ class DataUploader:
         key = "/".join([self.folder_name, self.id_str])
         response = self.s3_client.list_objects_v2(Bucket=self.bucket_name,
                                                   Prefix=key)
-        assert response['KeyCount'] == 0 \
+        assert response['KeyCount'] == 0, \
             "Key already exists on S3: {}".format(key)
 
     def serialize_im(self, im):
@@ -46,18 +46,18 @@ class DataUploader:
     def upload_slices(self, file_names, im_stack):
         """
         Upload all slices to S3
-        
-        :param file_names:
-        :param im_stack:
-        :return:
+
+        :param list of str file_names: image file names
+        :param np.array im_stack:
+
         """
 
         for i, file_name in enumerate(file_names):
             key = "/".join([self.folder_name, self.id_str, file_name])
             response = self.s3_client.list_objects_v2(Bucket=self.bucket_name,
                                                       Prefix=key)
-            assert response['KeyCount'] == 0 \
-                    "Key already exists on S3: {}".format(key)
+            assert response['KeyCount'] == 0, \
+                "Key already exists on S3: {}".format(key)
             # Serialize image
             im_bytes = self.serialize_im(im_stack[..., i])
             # Upload slice to S3

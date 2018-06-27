@@ -12,8 +12,8 @@ MICROMETA_NAMES = ["ChannelIndex",
                    "XResolution",
                    "YResolution",
                    "ResolutionUnit",
-                   "MicroManagerMetadata",
-                   "FileName"]
+                   "FileName",
+                   "MicroManagerMetadata"]
 
 
 def get_image_description(image_str):
@@ -47,12 +47,16 @@ def get_image_description(image_str):
     return nbr_channels, nbr_slices, slice_order
 
 
-def read_ome_tiff(file_name):
+def read_ome_tiff(file_name, file_format=".png", int2str_len=3):
     """
     reads ome.tiff file into memory and separates image files and metadata.
 
     :param str file_name: full path to file
-    :return:
+    :param str file_format: file format for image name
+    :param int int2str_len: format file name using ints converted to specific
+        string length
+    :return np.array im_stack: image stack
+    :return pd.DataFrame metadata: associated metadata for each slice
     """
     frames = pims.TiffStack(file_name)
     # Get global metadata
@@ -75,7 +79,6 @@ def read_ome_tiff(file_name):
     metadata = pd.DataFrame(
         index=range(global_metadata["nbr_frames"]),
         columns=MICROMETA_NAMES)
-    micrometa = []
     for i, im_nbr in enumerate(range(global_metadata["nbr_frames"])):
         frame = frames._tiff[im_nbr]
         im_stack[:, :, im_nbr] = frame.asarray()
@@ -91,13 +94,14 @@ def read_ome_tiff(file_name):
             row.append(micromanager_meta[meta_name])
         # Last three are from other tags
         # XResolution, YResolution, ResolutionUnit
-        row.append(frame.tags[MICROMETA_NAMES[3]].value[0])
         row.append(frame.tags[MICROMETA_NAMES[4]].value[0])
-        row.append(str(frame.tags[MICROMETA_NAMES[5]].value))
+        row.append(frame.tags[MICROMETA_NAMES[5]].value[0])
+        row.append(str(frame.tags[MICROMETA_NAMES[6]].value))
         # Create a file name and add it
-        row.append("im_channel{}_slice{}_frame{}.png".format(
-            row[:3]
-        ))
+        im_name = "im_channel" + str(row[0]).zfill(int2str_len) + \
+            "_slice" + str(row[1]).zfill(int2str_len) + \
+            "_frame" + str(row[2]).zfill(int2str_len) + file_format
+        row.append(im_name)
         row.append(micromanager_meta)
         # Insert row in dataframe
         metadata.loc[i] = row

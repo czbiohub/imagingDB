@@ -5,7 +5,10 @@ import os
 
 import imaging_db.cli.cli_utils as cli_utils
 import imaging_db.database.db_session as db_session
+import imaging_db.filestorage.upload_data as upload_data
 import imaging_db.images.file_slicer as file_slicer
+
+SLICE_FOLDER_NAME = "raw_slices"
 
 
 def parse_args():
@@ -42,9 +45,17 @@ def slice_and_upload(args):
         print("Invalid ID:", e)
     # Get image stack and metadata
     im_stack, metadata = file_slicer.read_ome_tiff(args.file)
+    # Upload images to S3 bucket
+    data_uploader = upload_data.DataUploader(
+        id_str=args.id,
+        folder_name=SLICE_FOLDER_NAME
+    )
+    data_uploader.upload_slices(file_names=list(metadata["FileName"]),
+                                im_stack=im_stack)
 
     # Start DB session
     session = db_session.start_session(args.config, echo_sql=True)
+    # Enter metadata into database
 
 
 if __name__ == '__main__':
