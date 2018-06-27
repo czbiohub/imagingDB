@@ -53,6 +53,30 @@ def test_invalid_json():
         schema_name="CREDENTIALS_SCHEMA")
 
 
+def test_valid_micrometa():
+    micrometa_json = {
+        "ChannelIndex": 4,
+        "Slice": 1,
+        "FrameIndex": 0,
+        "Exposure-ms": 50,
+        'COM1-DataBits': '8'
+    }
+    json_validator.validate_schema(
+        micrometa_json,
+        schema_name="MICROMETA_SCHEMA")
+
+
+@nose.tools.raises(jsonschema.exceptions.ValidationError)
+def test_invalid_micrometa():
+    micrometa_json = {
+        "ChannelIndex": 4,
+        'COM1-DataBits': '8'
+    }
+    json_validator.validate_schema(
+        micrometa_json,
+        schema_name="MICROMETA_SCHEMA")
+
+
 @nose.tools.raises(KeyError)
 def test_not_a_schema():
     json_obj = {

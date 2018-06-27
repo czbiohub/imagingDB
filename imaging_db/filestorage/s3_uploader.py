@@ -5,21 +5,19 @@ import cv2
 class DataUploader:
     """Class for handling data uploads to S3"""
 
-    def __init__(self, id_str, folder_name, file_format=".png"):
+    def __init__(self, project_serial, folder_name):
         """
         Initialize S3 client and check that ID doesn't exist already
 
-        :param id_str:
-        :param folder_name:
-        :param file_format:
+        :param project_serial: project serial ID
+        :param folder_name: folder name in S3 bucket, raw_files or raw_slices
         """
         self.bucket_name = "czbiohub-imaging"
         self.s3_client = boto3.client('s3')
-        self.id_str = id_str
+        self.project_serial = project_serial
         self.folder_name = folder_name
         # ID should be unique, make sure it doesn't already exist
         self.assert_unique_id()
-        self.file_format = file_format
 
     def assert_unique_id(self):
         """
@@ -27,7 +25,7 @@ class DataUploader:
 
         :raise AssertionError: if folder exists
         """
-        key = "/".join([self.folder_name, self.id_str])
+        key = "/".join([self.folder_name, self.project_serial])
         response = self.s3_client.list_objects_v2(Bucket=self.bucket_name,
                                                   Prefix=key)
         assert response['KeyCount'] == 0, \
@@ -37,8 +35,8 @@ class DataUploader:
         """
         Convert image to bytes object for transfer to storage
 
-        :param im:
-        :return:
+        :param np.array im: 2D image
+        :return: str im_encoded: serialized image
         """
         res, im_encoded = cv2.imencode(self.file_format, im)
         return im_encoded.tostring()
@@ -48,15 +46,14 @@ class DataUploader:
         Upload all slices to S3
 
         :param list of str file_names: image file names
-        :param np.array im_stack:
-
+        :param np.array im_stack: all 2D frames from file converted to stack
         """
         assert len(file_names) == im_stack.shape[2], \
             "Number of file names {} doesn't match slices {}".format(
                 len(file_names), im_stack.shape[2])
 
         for i, file_name in enumerate(file_names):
-            key = "/".join([self.folder_name, self.id_str, file_name])
+            key = "/".join([self.folder_name, self.project_serial, file_name])
             response = self.s3_client.list_objects_v2(Bucket=self.bucket_name,
                                                       Prefix=key)
             assert response['KeyCount'] == 0, \
@@ -68,3 +65,12 @@ class DataUploader:
             self.s3_client.put_object(Bucket=self.bucket_name,
                                       Key=key,
                                       Body=im_bytes)
+
+    def upload_file(self, file_name):
+        """
+        Upload a single file
+        :param str file_name: full path to file
+        """
+        file_no_path = file_name.split("/")[-1]
+        key = "/".join([self.folder_name, self.project_serial, file_no_path])
+        self.s3_client.upload_file(file_name, self.bucket_name, key)

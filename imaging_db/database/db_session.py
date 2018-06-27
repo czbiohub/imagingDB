@@ -1,7 +1,11 @@
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
+from imaging_db.database.base import Base
+# from imaging_db.database.image_file import ImageFile
+# from imaging_db.database.image_slices import ImageSlices
+# from imaging_db.database.microscopy_file import MicroscopyFile
+from imaging_db.database.project import Project
 import imaging_db.metadata.json_validator as json_validator
 
 
@@ -16,12 +20,12 @@ def json_to_uri(credentials_json):
     :param json credentials_json: JSON object containing database credentials
     :return str credentials_str: URI for connecting to the database
     """
+    # Try without port # str(credentials_json["port"]) + "/" + \
     return \
         credentials_json["drivername"] + "://" + \
         credentials_json["username"] + ":" + \
         credentials_json["password"] + "@" + \
-        credentials_json["host"] + ":" + \
-        str(credentials_json["port"]) + "/" + \
+        credentials_json["host"] + "/" + \
         credentials_json["dbname"]
 
 
@@ -42,10 +46,27 @@ def start_session(credentials_filename, echo_sql=False):
     credentials_str = json_to_uri(credentials_json)
     # Create SQLAlchemy engine, connect and return session
     engine = create_engine(credentials_str, echo=echo_sql)
-    # Declarative base
-    Base = declarative_base(engine)
-    metadata = Base.metadata
     # create a configured "Session" class
     Session = sessionmaker(bind=engine)
+    # Generate database schema
+    Base.metadata.create_all(engine)
     # return session handle
     return Session()
+
+
+def insert_slices(credentials_filename,
+                  project_serial,
+                  file_format,
+                  slice_meta,
+                  slice_json_meta,
+                  global_meta,
+                  global_json_meta):
+    # Create session
+    session = start_session(credentials_filename, echo_sql=True)
+    # First insert project ID in the main Project table with sliced=True
+    project_temp = Project(project_serial, file_format, True)
+    session.add(project_temp)
+    session.commit()
+    session.close()
+
+
