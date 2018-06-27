@@ -3,7 +3,7 @@ import cv2
 
 
 class DataUploader:
-    """Class for handling data uploads"""
+    """Class for handling data uploads to S3"""
 
     def __init__(self, id_str, folder_name, file_format=".png"):
         """
@@ -51,6 +51,9 @@ class DataUploader:
         :param np.array im_stack:
 
         """
+        assert len(file_names) == im_stack.shape[2], \
+            "Number of file names {} doesn't match slices {}".format(
+                len(file_names), im_stack.shape[2])
 
         for i, file_name in enumerate(file_names):
             key = "/".join([self.folder_name, self.id_str, file_name])
@@ -61,6 +64,7 @@ class DataUploader:
             # Serialize image
             im_bytes = self.serialize_im(im_stack[..., i])
             # Upload slice to S3
+            print("Writing to S3", key)
             self.s3_client.put_object(Bucket=self.bucket_name,
                                       Key=key,
                                       Body=im_bytes)

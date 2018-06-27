@@ -5,10 +5,11 @@ import os
 
 import imaging_db.cli.cli_utils as cli_utils
 import imaging_db.database.db_session as db_session
-import imaging_db.filestorage.upload_data as upload_data
+import imaging_db.filestorage.s3_uploader as s3_uploader
 import imaging_db.images.file_slicer as file_slicer
 
 SLICE_FOLDER_NAME = "raw_slices"
+FILE_FORMAT = ".png"
 
 
 def parse_args():
@@ -43,19 +44,24 @@ def slice_and_upload(args):
         cli_utils.validate_id(args.id)
     except AssertionError as e:
         print("Invalid ID:", e)
+    # Should maybe test db session and check unique ID first?
     # Get image stack and metadata
-    im_stack, metadata = file_slicer.read_ome_tiff(args.file)
+    im_stack,\
+    metadata,\
+    micromanager_meta,\
+    global_metadata = file_slicer.read_ome_tiff(args.file)
     # Upload images to S3 bucket
-    data_uploader = upload_data.DataUploader(
+    data_uploader = s3_uploader.DataUploader(
         id_str=args.id,
-        folder_name=SLICE_FOLDER_NAME
+        folder_name=SLICE_FOLDER_NAME,
+        file_format=FILE_FORMAT,
     )
     data_uploader.upload_slices(file_names=list(metadata["FileName"]),
                                 im_stack=im_stack)
 
     # Start DB session
-    session = db_session.start_session(args.config, echo_sql=True)
-    # Enter metadata into database
+    with db_session.start_session(args.config, echo_sql=True) as session:
+        # Enter metadata into database
 
 
 if __name__ == '__main__':
