@@ -5,7 +5,7 @@ import cv2
 class DataUploader:
     """Class for handling data uploads to S3"""
 
-    def __init__(self, project_serial, folder_name):
+    def __init__(self, project_serial, folder_name, file_format=".png"):
         """
         Initialize S3 client and check that ID doesn't exist already
 
@@ -16,6 +16,7 @@ class DataUploader:
         self.s3_client = boto3.client('s3')
         self.project_serial = project_serial
         self.folder_name = folder_name
+        self.file_format = file_format
         # ID should be unique, make sure it doesn't already exist
         self.assert_unique_id()
 
