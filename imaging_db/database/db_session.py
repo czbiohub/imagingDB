@@ -54,6 +54,11 @@ def start_session(credentials_filename, echo_sql=False):
     return Session()
 
 
+def test_connection(credentials_filename):
+    with start_session(credentials_filename) as session:
+        session.execute('SELECT 1')
+
+
 def insert_slices(credentials_filename,
                   project_serial,
                   file_format,
@@ -62,7 +67,7 @@ def insert_slices(credentials_filename,
                   global_meta,
                   global_json_meta):
     # Create session
-    session = start_session(credentials_filename, echo_sql=True)
+    session = start_session(credentials_filename, echo_sql=False)
     # First insert project ID in the main Project table with sliced=True
     project_temp = Project(project_serial, file_format, True)
     session.add(project_temp)

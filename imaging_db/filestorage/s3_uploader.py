@@ -69,7 +69,8 @@ class DataUploader:
 
     def upload_file(self, file_name):
         """
-        Upload a single file
+        Upload a single file to S3 without reading its contents
+
         :param str file_name: full path to file
         """
         file_no_path = file_name.split("/")[-1]

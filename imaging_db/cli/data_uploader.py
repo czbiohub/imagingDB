@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import argparse
+import os
 
 import imaging_db.cli.cli_utils as cli_utils
 import imaging_db.database.db_session as db_session
@@ -20,10 +21,14 @@ def parse_args():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--file', type=str, help="Full path to file")
-    parser.add_argument('--config', type=str,
+    parser.add_argument('--login', type=str,
                         help="Full path to JSON config file with login info")
+    parser.add_argument('--schema', type=str,
+                        help="Full path to JSON file with metadata schema")
     parser.add_argument('--id', type=str,
                         help="Unique file ID: <ID>-YYYY-MM-DD-HH-MM-SS-<SSSS>")
+    parser.add_argument('--description', type=str,
+                        help="Short text file containing file description")
     parser.add_argument('--upload_type', type=str,
                         help="Type of upload, 'file' for just uploading a file"
                         "or 'slice' for reading file and splitting stack into"
@@ -39,7 +44,7 @@ def upload_data_and_update_db(args):
 
     :param list args:    parsed args containing
         str file:  Full path to input file that also has metadata
-        str id: Unique file ID <ID>-YYYY-MM-DD-HH-<SSSS>
+        str id: Unique file ID <ID>-YYYY-MM-DD-HH-MM-SS-<SSSS>
     """
     # Assert that ID is correctly formatted
     project_serial = args.id
@@ -47,11 +52,30 @@ def upload_data_and_update_db(args):
         cli_utils.validate_id(project_serial)
     except AssertionError as e:
         print("Invalid ID:", e)
-    # Should maybe test db session and check unique ID first?
+
     # Assert that upload type is valid
     assert args.upload_type in {"file", "slice"}, \
         "upload_type should be file or slice, not {}".format(args.upload_type)
 
+    # First, make sure we can connect to the database
+    try:
+        db_session.test_connection(args.login)
+    except Exception as e:
+        print(e)
+
+    # Get file description
+    # TODO: Is a text file the best way to go here?
+    assert os.path.isfile(args.description), \
+        "File description doesn't exist: {}".format(args.description)
+    with open(args.description, "r") as read_file:
+        description = read_file.read()
+
+    # Make sure file exists
+    file_name = args.file
+    assert os.path.isfile(file_name), \
+        "File doesn't exist: {}".format(file_name)
+    # Global json contains file origin and a description string
+    # Read description from file?
     if args.upload_type == "slice":
         # Get image stack and metadata
         im_stack, \
@@ -59,28 +83,33 @@ def upload_data_and_update_db(args):
         slice_json, \
         global_meta, \
         global_json = file_slicer.read_ome_tiff(
-            file_name=args.file,
+            file_name=file_name,
+            schema_filename=args.schema,
             file_format=SLICE_FILE_FORMAT)
         # Upload images to S3 bucket
         data_uploader = s3_uploader.DataUploader(
-            id_str=project_serial,
+            project_serial=project_serial,
             folder_name=SLICE_FOLDER_NAME,
         )
         data_uploader.upload_slices(file_names=list(slice_meta["FileName"]),
                                     im_stack=im_stack)
-        # Add slice entries to DB once I can get it tested!!!
-        # NOTE: What to do if db connection times out before commit?
+        global_json["folder_name"] = "/".join([SLICE_FOLDER_NAME, project_serial])
+        global_json["description"] = description
+        # Add slice entries to DB
+
     else:
         # Just upload file without any processing
         data_uploader = s3_uploader.DataUploader(
-            id_str=project_serial,
+            project_serial=project_serial,
             folder_name=FILE_FOLDER_NAME,
         )
-        data_uploader.upload_file(file_name=args.file)
-        global_json = {
-            "file_origin": args.file,
-        }
+        data_uploader.upload_file(file_name=file_name)
         # Add file entry to DB once I can get it tested
+        global_json = {
+            "file_origin": file_name,
+            "folder_name": "/".join([FILE_FOLDER_NAME, project_serial]),
+            "description": description
+        }
 
 
 if __name__ == '__main__':

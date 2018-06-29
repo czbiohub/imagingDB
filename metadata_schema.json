@@ -1,0 +1,31 @@
+{
+  "type": "object",
+  "properties": {
+    "MicroManagerMetadata": {
+      "type": "object",
+      "properties": {
+        "ChannelIndex": {
+          "type": "integer"
+        },
+        "Slice": {
+          "type": "integer"
+        },
+        "FrameIndex": {
+          "type": "integer"
+        },
+        "Exposure-ms": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "ChannelIndex",
+        "Slice",
+        "FrameIndex",
+        "Exposure-ms"
+      ]
+    }
+  },
+  "required": [
+    "MicroManagerMetadata"
+  ]
+}

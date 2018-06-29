@@ -17,9 +17,7 @@ class ImageSlices(Base):
      'Slice',
      'FrameIndex',
      'Exposure-ms',
-     'XResolution',
-     'YResolution',
-     'ResolutionUnit',
+     'ChNames',
      'FileName'
 
     Plus a JSONB object with any additional slice information
@@ -30,10 +28,8 @@ class ImageSlices(Base):
     channel_idx = Column(Integer)
     slice_idx = Column(Integer)
     frame_idx = Column(Integer)
+    channel_name = Column(String)
     exposure_ms = Column(Numeric)
-    x_res = Column(Numeric)
-    y_res = Column(Numeric)
-    res_unit = Column(String)
     file_name = Column(String)
     metadata_json = Column(JSONB)
     image_id = Column(Integer, ForeignKey('image_file.id'))
@@ -44,19 +40,15 @@ class ImageSlices(Base):
                  slice_idx,
                  frame_idx,
                  exposure_ms,
-                 x_res,
-                 y_res,
-                 res_unit,
+                 channel_name,
                  file_name,
                  metadata_json,
                  image_file):
         self.channel_idx = channel_idx
         self.slice_idx = slice_idx
         self.frame_idx = frame_idx
+        self.channel_name = channel_name
         self.exposure_ms = exposure_ms
-        self.x_res = x_res
-        self.y_res = y_res
-        self.res_unit = res_unit
         self.file_name = file_name
         self.metadata_json = metadata_json
         self.image_file = image_file
