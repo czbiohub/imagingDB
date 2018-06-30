@@ -12,7 +12,6 @@ META_NAMES = ["ChannelIndex",
               "Exposure-ms",
               "FileName"]
 
-
 def get_imname(meta_i, file_format, int2str_len):
     return "im_c" + \
             str(meta_i["ChannelIndex"]).zfill(int2str_len) + \
@@ -26,6 +25,7 @@ def read_ome_tiff(file_name,
                   file_format=".png",
                   int2str_len=3):
     """
+    TODO: Convert this into class once we have more file types
     reads ome.tiff file into memory and separates image files and metadata.
     Workaround in case I need to read ome-xml:
     https://github.com/soft-matter/pims/issues/125

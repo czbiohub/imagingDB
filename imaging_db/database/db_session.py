@@ -2,9 +2,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from imaging_db.database.base import Base
-# from imaging_db.database.image_file import ImageFile
-# from imaging_db.database.image_slices import ImageSlices
-# from imaging_db.database.microscopy_file import MicroscopyFile
+from imaging_db.database.file_global import FileGlobal
+from imaging_db.database.sliced_global import SlicedGlobal
+from imaging_db.database.slices import slices
 from imaging_db.database.project import Project
 import imaging_db.metadata.json_validator as json_validator
 
@@ -20,12 +20,12 @@ def json_to_uri(credentials_json):
     :param json credentials_json: JSON object containing database credentials
     :return str credentials_str: URI for connecting to the database
     """
-    # Try without port # str(credentials_json["port"]) + "/" + \
     return \
         credentials_json["drivername"] + "://" + \
         credentials_json["username"] + ":" + \
         credentials_json["password"] + "@" + \
-        credentials_json["host"] + "/" + \
+        credentials_json["host"] + ":" + \
+        str(credentials_json["port"]) + "/" + \
         credentials_json["dbname"]
 
 
@@ -55,13 +55,17 @@ def start_session(credentials_filename, echo_sql=False):
 
 
 def test_connection(credentials_filename):
-    with start_session(credentials_filename) as session:
+    try:
+        session = start_session(credentials_filename)
         session.execute('SELECT 1')
+    except Exception as e:
+        print("Can't connect to database", e)
+        raise
 
 
 def insert_slices(credentials_filename,
                   project_serial,
-                  file_format,
+                  description,
                   slice_meta,
                   slice_json_meta,
                   global_meta,
@@ -69,8 +73,20 @@ def insert_slices(credentials_filename,
     # Create session
     session = start_session(credentials_filename, echo_sql=False)
     # First insert project ID in the main Project table with sliced=True
-    project_temp = Project(project_serial, file_format, True)
-    session.add(project_temp)
+    new_project = Project(project_serial, description, True)
+    new_sliced_global = SlicedGlobal(
+        global_meta["nbr_frames"],
+        global_meta["im_width"],
+        global_meta["im_height"],
+        global_meta["bit_depth"],
+        slice_json_meta,
+        new_project,
+    )
+    all_slices = []
+    for i in range(slice_meta.shape[0]):
+        # Insert all slices here then add them to new sliced global
+
+    session.add(new_project)
     session.commit()
     session.close()
 

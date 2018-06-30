@@ -7,7 +7,7 @@ from sqlalchemy.orm import relationship, backref
 from imaging_db.database.base import Base
 
 
-class ImageSlices(Base):
+class Slices(Base):
     """
     Table for individual 2D slices, which has a many to one mapping
     to image_files (which lists global information for the image stack)
@@ -17,12 +17,12 @@ class ImageSlices(Base):
      'Slice',
      'FrameIndex',
      'Exposure-ms',
-     'ChNames',
+     'ChannelName',
      'FileName'
 
     Plus a JSONB object with any additional slice information
     """
-    __tablename__ = 'image_slices'
+    __tablename__ = 'slices'
 
     id = Column(Integer, primary_key=True)
     channel_idx = Column(Integer)
@@ -32,8 +32,8 @@ class ImageSlices(Base):
     exposure_ms = Column(Numeric)
     file_name = Column(String)
     metadata_json = Column(JSONB)
-    image_id = Column(Integer, ForeignKey('image_file.id'))
-    image_file = relationship("ImageFile", backref="image_slices")
+    image_id = Column(Integer, ForeignKey('sliced_global.id'))
+    image_file = relationship("SlicedGlobal", backref="slices")
 
     def __init__(self,
                  channel_idx,

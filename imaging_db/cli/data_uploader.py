@@ -78,6 +78,7 @@ def upload_data_and_update_db(args):
     # Read description from file?
     if args.upload_type == "slice":
         # Get image stack and metadata
+
         im_stack, \
         slice_meta, \
         slice_json, \
@@ -94,8 +95,9 @@ def upload_data_and_update_db(args):
         data_uploader.upload_slices(file_names=list(slice_meta["FileName"]),
                                     im_stack=im_stack)
         global_json["folder_name"] = "/".join([SLICE_FOLDER_NAME, project_serial])
-        global_json["description"] = description
+        global_meta["description"] = description
         # Add slice entries to DB
+        db_session.insert_slices(args.login, project_serial, file_format=)
 
     else:
         # Just upload file without any processing
@@ -108,8 +110,8 @@ def upload_data_and_update_db(args):
         global_json = {
             "file_origin": file_name,
             "folder_name": "/".join([FILE_FOLDER_NAME, project_serial]),
-            "description": description
         }
+        global_meta = {"description": description}
 
 
 if __name__ == '__main__':

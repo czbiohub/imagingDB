@@ -7,12 +7,12 @@ from sqlalchemy.orm import relationship, backref
 from imaging_db.database.base import Base
 
 
-class MicroscopyFile(Base):
+class FileGlobal(Base):
     """
     Table for files that are uploaded to S3 as is, most likely
     as a stack in some proprietary microscopy file format
     """
-    __tablename__ = 'microscopy_file'
+    __tablename__ = 'file_global'
 
     id = Column(Integer, primary_key=True)
     file_name = Column(String)
@@ -22,7 +22,7 @@ class MicroscopyFile(Base):
     project_id = Column(Integer, ForeignKey('project.id'))
     # Provide one to one mapping with project
     project = relationship("Project",
-                           backref=backref("microscopy_file", uselist=False))
+                           backref=backref("file_global", uselist=False))
 
     def __init__(self, file_name, metadata_json, project):
         self.file_name = file_name
