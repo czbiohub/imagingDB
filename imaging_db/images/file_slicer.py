@@ -47,15 +47,21 @@ def read_ome_tiff(file_name,
     frames = pims.TiffStack(file_name)
     # Get global metadata
     frame_shape = frames.frame_shape
+    # Encode color channel information
+    im_colors = 1
+    if len(frame_shape) == 3:
+        im_colors = frame_shape[2]
     global_meta = {
         "nbr_frames": len(frames),
         "im_width": frame_shape[0],
         "im_height": frame_shape[1],
+        "im_colors": im_colors,
         "bit_depth": str(frames.pixel_type),
     }
     # Create image stack with image bit depth 16 or 8
     im_stack = np.empty((frame_shape[0],
-                         frame_shape[0],
+                         frame_shape[1],
+                         im_colors,
                          global_meta["nbr_frames"]),
                         dtype=frames.pixel_type)
 
@@ -75,7 +81,7 @@ def read_ome_tiff(file_name,
     slice_json = []
     for i in range(global_meta["nbr_frames"]):
         frame = frames._tiff[i]
-        im_stack[:, :, i] = frame.asarray()
+        im_stack[..., i] = frame.asarray()
         # Get dict with metadata from json schema
         json_i, meta_i = json_validator.get_metadata_from_tags(
             frame=frame,
