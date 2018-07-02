@@ -33,7 +33,7 @@ class Slices(Base):
     file_name = Column(String)
     metadata_json = Column(JSONB)
     image_id = Column(Integer, ForeignKey('sliced_global.id'))
-    image_file = relationship("SlicedGlobal", backref="slices")
+    sliced_global = relationship("SlicedGlobal", backref="slices")
 
     def __init__(self,
                  channel_idx,
@@ -43,7 +43,7 @@ class Slices(Base):
                  channel_name,
                  file_name,
                  metadata_json,
-                 image_file):
+                 sliced_global):
         self.channel_idx = channel_idx
         self.slice_idx = slice_idx
         self.frame_idx = frame_idx
@@ -51,4 +51,4 @@ class Slices(Base):
         self.exposure_ms = exposure_ms
         self.file_name = file_name
         self.metadata_json = metadata_json
-        self.image_file = image_file
+        self.sliced_global = sliced_global

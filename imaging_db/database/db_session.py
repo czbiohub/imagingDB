@@ -1,12 +1,43 @@
+from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from imaging_db.database.base import Base
 from imaging_db.database.file_global import FileGlobal
 from imaging_db.database.sliced_global import SlicedGlobal
-from imaging_db.database.slices import slices
+from imaging_db.database.slices import Slices
 from imaging_db.database.project import Project
 import imaging_db.metadata.json_validator as json_validator
+
+
+@contextmanager
+def session_scope(credentials_filename, echo_sql=False):
+    """
+    Provide a transactional scope around a series of
+    database operations.
+    """
+    # Read and validate json
+    credentials_json = json_validator.read_json_file(
+        json_filename=credentials_filename,
+        schema_name="CREDENTIALS_SCHEMA")
+    # Convert json to string compatible with engine
+    credentials_str = json_to_uri(credentials_json)
+    # Create SQLAlchemy engine, connect and return session
+    engine = create_engine(credentials_str, echo=echo_sql)
+    # create a configured "Session" class
+    Session = sessionmaker(bind=engine)
+    # Generate database schema
+    Base.metadata.create_all(engine)
+    session = Session()
+    try:
+        yield session
+        session.commit()
+    except Exception as e:
+        print(e)
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 def json_to_uri(credentials_json):
@@ -29,35 +60,10 @@ def json_to_uri(credentials_json):
         credentials_json["dbname"]
 
 
-def start_session(credentials_filename, echo_sql=False):
-    """
-    Given a json file name containing database login credentials,
-    start a SQLAlchemy session for database queries
-
-    :param str credentials_filename: json file containing login credentials
-    :param bool echo_sql: if True, sends all generated SQL to stout
-    :return Session: SQLAlchemy session
-    """
-    # Read and validate json
-    credentials_json = json_validator.read_json_file(
-        json_filename=credentials_filename,
-        schema_name="CREDENTIALS_SCHEMA")
-    # Convert json to string compatible with engine
-    credentials_str = json_to_uri(credentials_json)
-    # Create SQLAlchemy engine, connect and return session
-    engine = create_engine(credentials_str, echo=echo_sql)
-    # create a configured "Session" class
-    Session = sessionmaker(bind=engine)
-    # Generate database schema
-    Base.metadata.create_all(engine)
-    # return session handle
-    return Session()
-
-
 def test_connection(credentials_filename):
     try:
-        session = start_session(credentials_filename)
-        session.execute('SELECT 1')
+        with session_scope(credentials_filename) as session:
+            session.execute('SELECT 1')
     except Exception as e:
         print("Can't connect to database", e)
         raise
@@ -71,23 +77,54 @@ def insert_slices(credentials_filename,
                   global_meta,
                   global_json_meta):
     # Create session
-    session = start_session(credentials_filename, echo_sql=False)
-    # First insert project ID in the main Project table with sliced=True
-    new_project = Project(project_serial, description, True)
-    new_sliced_global = SlicedGlobal(
-        global_meta["nbr_frames"],
-        global_meta["im_width"],
-        global_meta["im_height"],
-        global_meta["bit_depth"],
-        slice_json_meta,
-        new_project,
-    )
-    all_slices = []
-    for i in range(slice_meta.shape[0]):
-        # Insert all slices here then add them to new sliced global
+    with session_scope(credentials_filename) as session:
+        # First insert project ID in the main Project table with sliced=True
+        new_project = Project(
+            project_serial=project_serial,
+            description=description,
+            sliced=True)
+        # Add global slice information
+        new_sliced_global = SlicedGlobal(
+            nbr_frames=global_meta["nbr_frames"],
+            im_width=global_meta["im_width"],
+            im_height=global_meta["im_height"],
+            bit_depth=global_meta["bit_depth"],
+            metadata_json=global_json_meta,
+            project=new_project,
+        )
+        for i in range(slice_meta.shape[0]):
+            # Insert all slices here then add them to new sliced global
+            temp_slice = Slices(
+                channel_idx=slice_meta.loc[i, "ChannelIndex"],
+                slice_idx=slice_meta.loc[i, "Slice"],
+                frame_idx=slice_meta.loc[i, "FrameIndex"],
+                exposure_ms=slice_meta.loc[i, "Exposure-ms"],
+                channel_name=slice_meta.loc[i, "ChannelName"],
+                file_name=slice_meta.loc[i, "FileName"],
+                metadata_json=slice_json_meta[i],
+                sliced_global=new_sliced_global,
+            )
+            session.add(temp_slice)
 
-    session.add(new_project)
-    session.commit()
-    session.close()
+        session.add(new_project)
+        session.add(new_sliced_global)
 
 
+def insert_file(credentials_filename,
+                project_serial,
+                description,
+                global_json_meta):
+    # Create session
+    with session_scope(credentials_filename) as session:
+        # First insert project ID in the main Project table with sliced=True
+        new_project = Project(
+            project_serial=project_serial,
+            description=description,
+            sliced=False)
+        # Add s3 location
+        new_file_global = FileGlobal(
+            metadata_json=global_json_meta,
+            project=new_project,
+        )
+        session.add(new_project)
+        session.add(new_file_global)

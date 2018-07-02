@@ -15,7 +15,6 @@ class FileGlobal(Base):
     __tablename__ = 'file_global'
 
     id = Column(Integer, primary_key=True)
-    file_name = Column(String)
     # Add potential to throw whatever metadata they want
     # in a JSONB object
     metadata_json = Column(JSONB)
@@ -24,7 +23,6 @@ class FileGlobal(Base):
     project = relationship("Project",
                            backref=backref("file_global", uselist=False))
 
-    def __init__(self, file_name, metadata_json, project):
-        self.file_name = file_name
+    def __init__(self, metadata_json, project):
         self.metadata_json = metadata_json
         self.project = project
