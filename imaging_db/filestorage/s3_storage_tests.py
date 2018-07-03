@@ -7,7 +7,7 @@ import numpy.testing
 import os
 from testfixtures import TempDirectory
 
-import imaging_db.filestorage.s3_uploader as s3_uploader
+import imaging_db.filestorage.s3_storage as s3_storage
 import imaging_db.utils.image_utils as im_utils
 
 
@@ -19,7 +19,7 @@ def test_upload_data():
     conn.create_bucket(Bucket=bucket_name)
 
     folder_name = "raw_slices/ISP-2018-06-08-15-45-00-0001"
-    data_uploader = s3_uploader.DataUploader(folder_name)
+    data_uploader = s3_storage.DataStorage(folder_name)
     im_stack = np.ones((10, 15, 2), np.uint16) * 3000
     im_stack[0:5, 2:4, 0] = 42
     im_stack[3:7, 12:14, 1] = 10000
@@ -45,7 +45,7 @@ def test_upload_color_data():
     conn.create_bucket(Bucket=bucket_name)
 
     folder_name = "raw_slices/ISP-2018-06-08-15-45-00-0001"
-    data_uploader = s3_uploader.DataUploader(folder_name)
+    data_uploader = s3_storage.DataStorage(folder_name)
     im_stack = np.ones((10, 15, 3, 2), np.uint16) * 3000
     im_stack[0:5, 2:4, :, 0] = 42
     im_stack[3:7, 12:14, :, 1] = 10000
@@ -84,7 +84,7 @@ def test_upload_file():
         tempdir.write(im_name, im_encoded)
         # Upload file
         file_path = os.path.join(tempdir.path, im_name)
-        data_uploader = s3_uploader.DataUploader(folder_name)
+        data_uploader = s3_storage.DataStorage(folder_name)
         data_uploader.upload_file(file_name=file_path)
         key = "/".join([folder_name, im_name])
         byte_string = conn.Object(bucket_name, key).get()['Body'].read()

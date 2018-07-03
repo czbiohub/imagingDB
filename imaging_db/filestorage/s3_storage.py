@@ -4,7 +4,7 @@ import numpy as np
 import imaging_db.utils.image_utils as im_utils
 
 
-class DataUploader:
+class DataStorage:
     """Class for handling data uploads to S3"""
 
     def __init__(self, folder_name):

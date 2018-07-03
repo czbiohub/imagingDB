@@ -2,15 +2,10 @@
 
 import argparse
 import os
-import pandas as pd
 
 import imaging_db.cli.cli_utils as cli_utils
 import imaging_db.database.db_session as db_session
-import imaging_db.filestorage.s3_uploader as s3_uploader
-
-FILE_FOLDER_NAME = "raw_files"
-SLICE_FOLDER_NAME = "raw_slices"
-SLICE_FILE_FORMAT = ".png"
+import imaging_db.filestorage.s3_storage as s3_storage
 
 
 def parse_args():
@@ -34,11 +29,30 @@ def download_data(args):
     download them to local folder
 
     :param args: Command line arguments:
-        str id: Unique project identifier
+        str id: Unique dataset identifier
         str dest: Local destination folder
         str login: Full path to json file containing database login credentials
     """
-    raise NotImplementedError
+    dataset_serial = args.id
+    try:
+        cli_utils.validate_id(dataset_serial)
+    except AssertionError as e:
+        print("Invalid ID:", e)
+
+    # Create output directory if it doesn't exist already
+    dest_folder = args.dest
+    os.makedirs(dest_folder, exist_ok=True)
+
+    folder_name, file_names = db_session.get_filenames(
+        credentials_filename=args.login,
+        dataset_serial=dataset_serial)
+
+    data_loader = s3_storage.DataStorage(
+        folder_name=folder_name,
+    )
+    for f in file_names:
+        dest_path = os.path.join(dest_folder, f)
+        data_loader.download_file(file_name=f, dest_path=dest_path)
 
 
 if __name__ == '__main__':

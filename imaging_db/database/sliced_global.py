@@ -24,9 +24,9 @@ class SlicedGlobal(Base):
     # in a JSONB object
     metadata_json = Column(JSONB)
     # Map project id
-    project_id = Column(Integer, ForeignKey('project.id'))
-    # Provide one to one mapping with project
-    project = relationship("Project",
+    dataset_id = Column(Integer, ForeignKey('data_set.id'))
+    # Provide one to one mapping with dataset
+    data_set = relationship("DataSet",
                            backref=backref("sliced_global", uselist=False))
 
     def __init__(self,
@@ -37,7 +37,7 @@ class SlicedGlobal(Base):
                  bit_depth,
                  folder_name,
                  metadata_json,
-                 project):
+                 data_set):
         self.nbr_frames = nbr_frames
         self.im_width = im_width
         self.im_height = im_height
@@ -45,5 +45,4 @@ class SlicedGlobal(Base):
         self.bit_depth = bit_depth
         self.folder_name = folder_name
         self.metadata_json = metadata_json
-        self.project = project
-
+        self.data_set = data_set

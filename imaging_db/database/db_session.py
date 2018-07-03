@@ -6,7 +6,7 @@ from imaging_db.database.base import Base
 from imaging_db.database.file_global import FileGlobal
 from imaging_db.database.sliced_global import SlicedGlobal
 from imaging_db.database.slices import Slices
-from imaging_db.database.project import Project
+from imaging_db.database.dataset import DataSet
 import imaging_db.metadata.json_validator as json_validator
 
 
@@ -73,37 +73,47 @@ def test_connection(credentials_filename):
 
 
 def insert_slices(credentials_filename,
-                  project_serial,
+                  dataset_serial,
                   description,
                   folder_name,
                   slice_meta,
                   slice_json_meta,
                   global_meta,
-                  global_json_meta):
+                  global_json_meta,
+                  parent_dataset=None):
     """
     Insert global and local information from file that has been
     converted to image slices with corresponding metadata
     :param str credentials_filename: JSON file containing DB credentials
-    :param str project_serial: Unique identifier for file
+    :param str dataset_serial: Unique identifier for file
     :param str description: Short description of file
     :param str folder_name: Folder in S3 bucket where data is stored
     :param dataframe slice_meta: Dataframe containing mandatory slice fields
     :param json slice_json_meta: json object with arbitrary local metadata
     :param dict global_meta: Required global metadata fields
     :param json global_json_meta: Arbitrary global metadata
+    :param str parent_dataset: Assign parent if not null
     """
     # Create session
     with session_scope(credentials_filename) as session:
         # Check if ID already exist
-        projs = session.query(Project) \
-            .filter(Project.project_serial == project_serial).all()
-        assert len(projs) == 0, \
-            "Project {} already exists in database".format(project_serial)
-        # Insert project ID in the main Project table with sliced=True
-        new_project = Project(
-            project_serial=project_serial,
+        datasets = session.query(DataSet) \
+            .filter(DataSet.dataset_serial == dataset_serial).all()
+        assert len(datasets) == 0, \
+            "Dataset {} already exists in database".format(dataset_serial)
+        # If parent dataset identifier is given, find its key and insert it
+        parent_key = None
+        if parent_dataset is not None:
+            parent = session.query(DataSet) \
+                .filter(DataSet.dataset_serial == parent_dataset).one()
+            parent_key = parent.id
+        # Insert dataset ID in the main DataSet table with sliced=True
+        new_dataset = DataSet(
+            dataset_serial=dataset_serial,
             description=description,
-            sliced=True)
+            sliced=True,
+            parent_id=parent_key,
+        )
         # Add global slice information
         new_sliced_global = SlicedGlobal(
             nbr_frames=global_meta["nbr_frames"],
@@ -113,87 +123,111 @@ def insert_slices(credentials_filename,
             bit_depth=global_meta["bit_depth"],
             folder_name = folder_name,
             metadata_json=global_json_meta,
-            project=new_project,
+            data_set=new_dataset,
         )
         for i in range(slice_meta.shape[0]):
             # Insert all slices here then add them to new sliced global
             temp_slice = Slices(
-                channel_idx=slice_meta.loc[i, "ChannelIndex"],
-                slice_idx=slice_meta.loc[i, "Slice"],
-                frame_idx=slice_meta.loc[i, "FrameIndex"],
-                exposure_ms=slice_meta.loc[i, "Exposure-ms"],
-                channel_name=slice_meta.loc[i, "ChannelName"],
-                file_name=slice_meta.loc[i, "FileName"],
+                channel_idx=slice_meta.loc[i, "channel_idx"],
+                slice_idx=slice_meta.loc[i, "slice_idx"],
+                frame_idx=slice_meta.loc[i, "frame_idx"],
+                exposure_ms=slice_meta.loc[i, "exposure_ms"],
+                channel_name=slice_meta.loc[i, "channel_name"],
+                file_name=slice_meta.loc[i, "file_name"],
                 metadata_json=slice_json_meta[i],
                 sliced_global=new_sliced_global,
             )
             session.add(temp_slice)
 
-        session.add(new_project)
+        session.add(new_dataset)
         session.add(new_sliced_global)
 
 
 def insert_file(credentials_filename,
-                project_serial,
+                dataset_serial,
                 description,
                 folder_name,
-                global_json_meta):
+                global_json_meta,
+                parent_dataset=None):
     """
     Upload file as is without slicing it or extracting metadata
+
     :param str credentials_filename: JSON file containing DB credentials
-    :param str project_serial: Unique identifier for file
+    :param str dataset_serial: Unique identifier for file
     :param str description: Short description of file
     :param str folder_name: Folder in S3 bucket where data is stored
     :param global_json_meta: Arbitrary metadata fields for file
+    :param str parent_dataset: Assign parent if not null
     """
     # Create session
     with session_scope(credentials_filename) as session:
         # Check if ID already exist
-        projs = session.query(Project) \
-            .filter(Project.project_serial == project_serial).all()
-        assert len(projs) == 0, \
-            "Project {} already exists in database".format(project_serial)
+        datasets = session.query(DataSet) \
+            .filter(DataSet.dataset_serial == dataset_serial).all()
+        assert len(datasets) == 0, \
+            "Dataset {} already exists in database".format(dataset_serial)
+        # If parent dataset identifier is given, find its key and insert it
+        parent_key = None
+        if parent_dataset is not None:
+            parent = session.query(DataSet) \
+                .filter(DataSet.dataset_serial == parent_dataset).one()
+            parent_key = parent.id
         # First insert project ID in the main Project table with sliced=True
-        new_project = Project(
-            project_serial=project_serial,
+        new_dataset = DataSet(
+            dataset_serial=dataset_serial,
             description=description,
-            sliced=False)
+            sliced=False,
+            parent_id=parent_key
+        )
         # Add s3 location
         new_file_global = FileGlobal(
             folder_name=folder_name,
             metadata_json=global_json_meta,
-            project=new_project,
+            data_set=new_dataset,
         )
-        session.add(new_project)
+        session.add(new_dataset)
         session.add(new_file_global)
 
 
-def get_filenames(credentials_filename, project_serial):
+def get_filenames(credentials_filename, dataset_serial):
     """
     Get S3 folder name and all file names associated with unique
     project identifier.
 
     :param str credentials_filename: JSON file containing DB credentials
-    :param str project_serial: Unique identifier for file
+    :param str dataset_serial: Unique identifier for file
     """
     # Create session
     with session_scope(credentials_filename) as session:
         # Check if ID already exist
-        proj = session.query(Project) \
-               .filter(Project.project_serial == project_serial).one()
-        print(proj.project_serial)
-        print(proj.sliced)
+        dataset = session.query(DataSet) \
+               .filter(DataSet.dataset_serial == dataset_serial).one()
 
-        if proj.sliced is False:
+        if dataset.sliced is False:
+            # Get file
             file_global = session.query(FileGlobal) \
-                .join(Project) \
-                .filter(Project.project_serial == proj.project_serial) \
+                .join(DataSet) \
+                .filter(DataSet.dataset_serial == dataset.dataset_serial) \
                 .one()
             file_name = file_global.metadata_json["file_origin"]
             file_name = file_name.split("/")[-1]
-            print(file_name)
 
             return file_global.folder_name, [file_name]
+        else:
+            # Get slices
+            slices = session.query(Slices) \
+                .join(SlicedGlobal) \
+                .join(DataSet) \
+                .filter(DataSet.dataset_serial == dataset.dataset_serial) \
+                .all()
+
+            folder_name = slices[0].sliced_global.folder_name
+            file_names = []
+            for s in slices:
+                file_names.append(s.file_name)
+
+            return folder_name, file_names
+
 
 
 

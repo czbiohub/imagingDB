@@ -19,12 +19,12 @@ class FileGlobal(Base):
     # Add potential to throw whatever metadata they want
     # in a JSONB object
     metadata_json = Column(JSONB)
-    project_id = Column(Integer, ForeignKey('project.id'))
-    # Provide one to one mapping with project
-    project = relationship("Project",
-                           backref=backref("file_global", uselist=False))
+    dataset_id = Column(Integer, ForeignKey('data_set.id'))
+    # Provide one to one mapping with dataset
+    data_set = relationship("DataSet",
+                            backref=backref("file_global", uselist=False))
 
-    def __init__(self, folder_name, metadata_json, project):
+    def __init__(self, folder_name, metadata_json, data_set):
         self.folder_name = folder_name
         self.metadata_json = metadata_json
-        self.project = project
+        self.data_set = data_set
