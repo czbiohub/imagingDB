@@ -84,19 +84,24 @@ def upload_data_and_update_db(args):
             meta_schema = files_data.loc[im_nbr, "meta_schema"]
 
             # Get image stack and metadata
-            # ome.tif is the assumed file format
-            im_stack, slice_meta, slice_json, global_meta, global_json = \
-                file_slicer.read_ome_tiff(
-                    file_name=file_name,
-                    schema_filename=meta_schema,
-                    file_format=SLICE_FILE_FORMAT)
-            # Upload image slices to S3 bucket
+            # ome.tif is the only file format tested at this point
+            assert file_name[-8:] == ".ome.tif", \
+                "Only supporting .ome.tif files for now"
+            # Folder name in S3 bucket
             folder_name = "/".join([SLICE_FOLDER_NAME,
                                     project_serial])
             try:
                 data_uploader = s3_uploader.DataUploader(
                     folder_name=folder_name,
                 )
+                data_uploader.assert_unique_id()
+                # Extract slices and metadata from file
+                im_stack, slice_meta, slice_json, global_meta, global_json = \
+                    file_slicer.read_ome_tiff(
+                        file_name=file_name,
+                        schema_filename=meta_schema,
+                        file_format=SLICE_FILE_FORMAT)
+                # Upload image slices to S3
                 data_uploader.upload_slices(
                     file_names=list(slice_meta["FileName"]),
                     im_stack=im_stack,
@@ -105,8 +110,9 @@ def upload_data_and_update_db(args):
             except AssertionError as e:
                 print("Project already on S3, moving on to DB entry")
                 print(e)
+
+            # Add sliced metadata to database
             try:
-                # Add sliced metadata to DB
                 db_session.insert_slices(
                     credentials_filename=args.login,
                     project_serial=project_serial,
@@ -121,7 +127,7 @@ def upload_data_and_update_db(args):
             except AssertionError as e:
                 print("Project {} already in DB".format(project_serial))
                 print(e)
-
+        # File upload
         else:
             # Just upload file without opening it
             folder_name = "/".join([FILE_FOLDER_NAME,

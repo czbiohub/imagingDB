@@ -17,6 +17,7 @@ class SlicedGlobal(Base):
     nbr_frames = Column(Integer)
     im_width = Column(Integer)
     im_height = Column(Integer)
+    im_colors = Column(Integer)
     bit_depth = Column(String)
     folder_name = Column(String)
     # Add potential to throw whatever metadata they want
@@ -32,6 +33,7 @@ class SlicedGlobal(Base):
                  nbr_frames,
                  im_width,
                  im_height,
+                 im_colors,
                  bit_depth,
                  folder_name,
                  metadata_json,
@@ -39,6 +41,7 @@ class SlicedGlobal(Base):
         self.nbr_frames = nbr_frames
         self.im_width = im_width
         self.im_height = im_height
+        self.im_colors = im_colors
         self.bit_depth = bit_depth
         self.folder_name = folder_name
         self.metadata_json = metadata_json

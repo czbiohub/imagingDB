@@ -65,7 +65,24 @@ class DataUploader:
                 Body=im_bytes,
             )
 
-    def fetch_slices(self, file_names, stack_shape, bit_depth):
+    def fetch_im(self, file_name):
+        """
+        Given file name, fetch image
+
+        :param str file_name: slice file name
+        :return np.array im: 2D image
+        """
+
+        key = "/".join([self.folder_name, file_name])
+        byte_str = self.s3_client.get_object(
+            Bucket=self.bucket_name,
+            Key=key,
+        )['Body'].read()
+        # Construct an array from the bytes and decode image
+        im = im_utils.deserialize_im(byte_str)
+        return im
+
+    def fetch_im_stack(self, file_names, stack_shape, bit_depth):
         """
         Given file names, fetch images and return image stack
 
@@ -82,7 +99,7 @@ class DataUploader:
             )['Body'].read()
             # Construct an array from the bytes and decode image
             im = im_utils.deserialize_im(byte_str)
-            im_stack[..., im_nbr] = im
+            im_stack[..., im_nbr] = np.atleast_3d(im)
         return im_stack
 
     def upload_file(self, file_name):
