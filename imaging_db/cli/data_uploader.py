@@ -33,6 +33,7 @@ def upload_data_and_update_db(args):
     Split, crop volumes and flatfield correct images in input and target
     directories. Writes output as npy files for faster reading while training.
     TODO: Add logging instead of printing
+    TODO: This ONLY supports ome.tif at the moment, fix when I have more data!
 
     :param list args:    parsed args containing
         str login: Full path to json file containing login credentials
@@ -80,58 +81,75 @@ def upload_data_and_update_db(args):
         description = files_data.loc[im_nbr, "description"]
 
         if upload_type == "slice":
-            meta_schema = files_data.loc[im_nbr, "description"]
+            meta_schema = files_data.loc[im_nbr, "meta_schema"]
 
             # Get image stack and metadata
+            # ome.tif is the assumed file format
             im_stack, slice_meta, slice_json, global_meta, global_json = \
                 file_slicer.read_ome_tiff(
                     file_name=file_name,
                     schema_filename=meta_schema,
                     file_format=SLICE_FILE_FORMAT)
             # Upload image slices to S3 bucket
-            data_uploader = s3_uploader.DataUploader(
-                project_serial=project_serial,
-                folder_name=SLICE_FOLDER_NAME,
-            )
-            data_uploader.upload_slices(
-                file_names=list(slice_meta["FileName"]),
-                im_stack=im_stack,
-            )
-            print("Slices in {} uploaded to S3".format(file_name))
-            global_json["folder_name"] = "/".join([SLICE_FOLDER_NAME,
-                                                   project_serial])
-            # Add sliced metadata to DB
-            db_session.insert_slices(
-                credentials_filename=args.login,
-                project_serial=project_serial,
-                description=description,
-                slice_meta=slice_meta,
-                slice_json_meta=slice_json,
-                global_meta=global_meta,
-                global_json_meta=global_json)
-            print("Slice info for {} inserted in DB".format(project_serial))
+            folder_name = "/".join([SLICE_FOLDER_NAME,
+                                    project_serial])
+            try:
+                data_uploader = s3_uploader.DataUploader(
+                    folder_name=folder_name,
+                )
+                data_uploader.upload_slices(
+                    file_names=list(slice_meta["FileName"]),
+                    im_stack=im_stack,
+                )
+                print("Slices in {} uploaded to S3".format(file_name))
+            except AssertionError as e:
+                print("Project already on S3, moving on to DB entry")
+                print(e)
+            try:
+                # Add sliced metadata to DB
+                db_session.insert_slices(
+                    credentials_filename=args.login,
+                    project_serial=project_serial,
+                    description=description,
+                    slice_meta=slice_meta,
+                    slice_json_meta=slice_json,
+                    global_meta=global_meta,
+                    folder_name=folder_name,
+                    global_json_meta=global_json)
+                print("Slice info for {} inserted in DB" \
+                      .format(project_serial))
+            except AssertionError as e:
+                print("Project {} already in DB".format(project_serial))
+                print(e)
 
         else:
             # Just upload file without opening it
-            data_uploader = s3_uploader.DataUploader(
-                project_serial=project_serial,
-                folder_name=FILE_FOLDER_NAME,
-            )
-            data_uploader.upload_file(file_name=file_name)
-            print("File {} uploaded to S3".format(file_name))
+            folder_name = "/".join([FILE_FOLDER_NAME,
+                                    project_serial])
+            try:
+                data_uploader = s3_uploader.DataUploader(
+                    folder_name=folder_name,
+                )
+                data_uploader.upload_file(file_name=file_name)
+                print("File {} uploaded to S3".format(file_name))
+            except AssertionError as e:
+                print("File {} already on S3".format(project_serial))
+                print(e)
             # Add file entry to DB once I can get it tested
             global_json = {
                 "file_origin": file_name,
-                "folder_name": "/".join([FILE_FOLDER_NAME,
-                                         project_serial]),
             }
-            db_session.insert_file(
-                credentials_filename=args.login,
-                project_serial=project_serial,
-                description=description,
-                global_json_meta=global_json)
-            print("File info for {} inserted in DB".format(project_serial))
-
+            try:
+                db_session.insert_file(
+                    credentials_filename=args.login,
+                    project_serial=project_serial,
+                    description=description,
+                    folder_name=folder_name,
+                    global_json_meta=global_json
+                )
+                print("File info for {} inserted in DB".format(project_serial))
+            except AssertionError as e:
+                print("File {} already in database".format(project_serial))
         print("Successfully entered {} to S3 storage and database".format(
             project_serial)
         )

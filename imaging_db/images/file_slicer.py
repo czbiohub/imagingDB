@@ -81,7 +81,7 @@ def read_ome_tiff(file_name,
     slice_json = []
     for i in range(global_meta["nbr_frames"]):
         frame = frames._tiff[i]
-        im_stack[..., i] = frame.asarray()
+        im_stack[..., i] = np.atleast_3d(frame.asarray())
         # Get dict with metadata from json schema
         json_i, meta_i = json_validator.get_metadata_from_tags(
             frame=frame,

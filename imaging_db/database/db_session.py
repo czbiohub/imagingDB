@@ -15,6 +15,9 @@ def session_scope(credentials_filename, echo_sql=False):
     """
     Provide a transactional scope around a series of
     database operations.
+
+    :param str credentials_filename: JSON file containing database credentials
+    :return SQLAlchemy session
     """
     # Read and validate json
     credentials_json = json_validator.read_json_file(
@@ -72,13 +75,31 @@ def test_connection(credentials_filename):
 def insert_slices(credentials_filename,
                   project_serial,
                   description,
+                  folder_name,
                   slice_meta,
                   slice_json_meta,
                   global_meta,
                   global_json_meta):
+    """
+    Insert global and local information from file that has been
+    converted to image slices with corresponding metadata
+    :param str credentials_filename: JSON file containing DB credentials
+    :param str project_serial: Unique identifier for file
+    :param str description: Short description of file
+    :param str folder_name: Folder in S3 bucket where data is stored
+    :param dataframe slice_meta: Dataframe containing mandatory slice fields
+    :param json slice_json_meta: json object with arbitrary local metadata
+    :param dict global_meta: Required global metadata fields
+    :param json global_json_meta: Arbitrary global metadata
+    """
     # Create session
     with session_scope(credentials_filename) as session:
-        # First insert project ID in the main Project table with sliced=True
+        # Check if ID already exist
+        projs = session.query(Project) \
+            .filter(Project.project_serial == project_serial).all()
+        assert len(projs) == 0, \
+            "Project {} already exists in database".format(project_serial)
+        # Insert project ID in the main Project table with sliced=True
         new_project = Project(
             project_serial=project_serial,
             description=description,
@@ -89,6 +110,7 @@ def insert_slices(credentials_filename,
             im_width=global_meta["im_width"],
             im_height=global_meta["im_height"],
             bit_depth=global_meta["bit_depth"],
+            folder_name = folder_name,
             metadata_json=global_json_meta,
             project=new_project,
         )
@@ -113,9 +135,23 @@ def insert_slices(credentials_filename,
 def insert_file(credentials_filename,
                 project_serial,
                 description,
+                folder_name,
                 global_json_meta):
+    """
+    Upload file as is without slicing it or extracting metadata
+    :param str credentials_filename: JSON file containing DB credentials
+    :param str project_serial: Unique identifier for file
+    :param str description: Short description of file
+    :param str folder_name: Folder in S3 bucket where data is stored
+    :param global_json_meta: Arbitrary metadata fields for file
+    """
     # Create session
     with session_scope(credentials_filename) as session:
+        # Check if ID already exist
+        projs = session.query(Project) \
+            .filter(Project.project_serial == project_serial).all()
+        assert len(projs) == 0, \
+            "Project {} already exists in database".format(project_serial)
         # First insert project ID in the main Project table with sliced=True
         new_project = Project(
             project_serial=project_serial,
@@ -123,6 +159,7 @@ def insert_file(credentials_filename,
             sliced=False)
         # Add s3 location
         new_file_global = FileGlobal(
+            folder_name=folder_name,
             metadata_json=global_json_meta,
             project=new_project,
         )

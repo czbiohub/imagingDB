@@ -18,9 +18,8 @@ def test_upload_data():
     # Create the bucket in Moto's 'virtual' AWS account
     conn.create_bucket(Bucket=bucket_name)
 
-    id_str = "ISP-2018-06-08-15-45-00-0001"
-    folder_name = "raw_slices"
-    data_uploader = s3_uploader.DataUploader(id_str, folder_name)
+    folder_name = "raw_slices/ISP-2018-06-08-15-45-00-0001"
+    data_uploader = s3_uploader.DataUploader(folder_name)
     im_stack = np.ones((10, 15, 2), np.uint16) * 3000
     im_stack[0:5, 2:4, 0] = 42
     im_stack[3:7, 12:14, 1] = 10000
@@ -28,12 +27,13 @@ def test_upload_data():
     data_uploader.upload_slices(file_names, im_stack)
     # Get images and validate that the contents are unchanged
     for im_nbr in range(len(file_names)):
-        key = "/".join([folder_name, id_str, file_names[im_nbr]])
+        key = "/".join([folder_name, file_names[im_nbr]])
         byte_string = conn.Object(bucket_name, key).get()['Body'].read()
         # Construct an array from the bytes and decode image
         im = im_utils.deserialize_im(byte_string)
         # Assert that contents are the same
         nose.tools.assert_equal(im.dtype, np.uint16)
+        nose.tools.assert_equal(im.shape, (10, 15))
         numpy.testing.assert_array_equal(im, im_stack[..., im_nbr])
 
 
@@ -44,9 +44,8 @@ def test_upload_color_data():
     # Ceate the bucket in Moto's 'virtual' AWS account
     conn.create_bucket(Bucket=bucket_name)
 
-    id_str = "ISP-2018-06-08-15-45-00-0001"
-    folder_name = "raw_slices"
-    data_uploader = s3_uploader.DataUploader(id_str, folder_name)
+    folder_name = "raw_slices/ISP-2018-06-08-15-45-00-0001"
+    data_uploader = s3_uploader.DataUploader(folder_name)
     im_stack = np.ones((10, 15, 3, 2), np.uint16) * 3000
     im_stack[0:5, 2:4, :, 0] = 42
     im_stack[3:7, 12:14, :, 1] = 10000
@@ -57,7 +56,7 @@ def test_upload_color_data():
     data_uploader.upload_slices(file_names, im_stack)
     # Get images and validate that the contents are unchanged
     for im_nbr in range(len(file_names)):
-        key = "/".join([folder_name, id_str, file_names[im_nbr]])
+        key = "/".join([folder_name, file_names[im_nbr]])
         byte_string = conn.Object(bucket_name, key).get()['Body'].read()
         # Construct an array from the bytes and decode image
         im = im_utils.deserialize_im(byte_string)
@@ -74,8 +73,7 @@ def test_upload_file():
     # Create the bucket in Moto's 'virtual' AWS account
     conn.create_bucket(Bucket=bucket_name)
 
-    id_str = "ML-2018-06-08-15-45-00-0001"
-    folder_name = "raw_files"
+    folder_name = "raw_files/ML-2018-06-08-15-45-00-0001"
 
     with TempDirectory() as tempdir:
         im = np.zeros((15, 12), dtype=np.uint16)
@@ -86,13 +84,12 @@ def test_upload_file():
         tempdir.write(im_name, im_encoded)
         # Upload file
         file_path = os.path.join(tempdir.path, im_name)
-        data_uploader = s3_uploader.DataUploader(id_str, folder_name)
+        data_uploader = s3_uploader.DataUploader(folder_name)
         data_uploader.upload_file(file_name=file_path)
-        key = "/".join([folder_name, id_str, im_name])
-        body = conn.Object(bucket_name, key).get()['Body'].read()
+        key = "/".join([folder_name, im_name])
+        byte_string = conn.Object(bucket_name, key).get()['Body'].read()
         # Construct an array from the bytes and decode image
-        im_encoded = np.fromstring(body, dtype='uint8')
-        im_out = cv2.imdecode(im_encoded, cv2.IMREAD_ANYDEPTH | cv2.IMREAD_ANYCOLOR)
+        im_out = im_utils.deserialize_im(byte_string)
         # Assert that contents are the same
         nose.tools.assert_equal(im_out.dtype, np.uint16)
         numpy.testing.assert_array_equal(im_out, im)

@@ -1,4 +1,5 @@
 import boto3
+import numpy as np
 
 import imaging_db.utils.image_utils as im_utils
 
@@ -6,20 +7,15 @@ import imaging_db.utils.image_utils as im_utils
 class DataUploader:
     """Class for handling data uploads to S3"""
 
-    def __init__(self, project_serial, folder_name, file_format=".png"):
+    def __init__(self, folder_name):
         """
         Initialize S3 client and check that ID doesn't exist already
 
-        :param project_serial: project serial ID
-        :param folder_name: folder name in S3 bucket, raw_files or raw_slices
+        :param str folder_name: folder name in S3 bucket
         """
         self.bucket_name = "czbiohub-imaging"
         self.s3_client = boto3.client('s3')
-        self.project_serial = project_serial
         self.folder_name = folder_name
-        self.file_format = file_format
-        # ID should be unique, make sure it doesn't already exist
-        self.assert_unique_id()
 
     def assert_unique_id(self):
         """
@@ -27,26 +23,29 @@ class DataUploader:
 
         :raise AssertionError: if folder exists
         """
-        key = "/".join([self.folder_name, self.project_serial])
         response = self.s3_client.list_objects_v2(Bucket=self.bucket_name,
-                                                  Prefix=key)
+                                                  Prefix=self.folder_name)
         assert response['KeyCount'] == 0, \
-            "Key already exists on S3: {}".format(key)
+            "Key already exists on S3: {}".format(self.folder_name)
 
-
-    def upload_slices(self, file_names, im_stack):
+    def upload_slices(self, file_names, im_stack, file_format=".png"):
         """
         Upload all slices to S3
 
         :param list of str file_names: image file names
         :param np.array im_stack: all 2D frames from file converted to stack
+        :param str file_format: file format for slices on S3
         """
+        # ID should be unique, make sure it doesn't already exist
+        self.assert_unique_id()
+        # Make sure number of file names matches stack shape
         assert len(file_names) == im_stack.shape[-1], \
             "Number of file names {} doesn't match slices {}".format(
                 len(file_names), im_stack.shape[-1])
 
         for i, file_name in enumerate(file_names):
-            key = "/".join([self.folder_name, self.project_serial, file_name])
+            key = "/".join([self.folder_name, file_name])
+            # Make sure image doesn't already exist
             response = self.s3_client.list_objects_v2(
                 Bucket=self.bucket_name,
                 Prefix=key,
@@ -56,7 +55,7 @@ class DataUploader:
             # Serialize image
             im_bytes = im_utils.serialize_im(
                 im=im_stack[..., i],
-                file_format=self.file_format
+                file_format=file_format,
             )
             # Upload slice to S3
             print("Writing to S3", key)
@@ -66,16 +65,53 @@ class DataUploader:
                 Body=im_bytes,
             )
 
+    def fetch_slices(self, file_names, stack_shape, bit_depth):
+        """
+        Given file names, fetch images and return image stack
+
+        :param list of str file_names: slice file names
+        :param tuple stack_shape: shape of image stack
+        :return np.array im_stack: stack of 2D images
+        """
+        im_stack = np.zeros(stack_shape, dtype=bit_depth)
+        for im_nbr in range(len(file_names)):
+            key = "/".join([self.folder_name, file_names[im_nbr]])
+            byte_str = self.s3_client.get_object(
+                Bucket=self.bucket_name,
+                Key=key,
+            )['Body'].read()
+            # Construct an array from the bytes and decode image
+            im = im_utils.deserialize_im(byte_str)
+            im_stack[..., im_nbr] = im
+        return im_stack
+
     def upload_file(self, file_name):
         """
         Upload a single file to S3 without reading its contents
 
         :param str file_name: full path to file
         """
+        # ID should be unique, make sure it doesn't already exist
+        self.assert_unique_id()
+
         file_no_path = file_name.split("/")[-1]
-        key = "/".join([self.folder_name, self.project_serial, file_no_path])
+        key = "/".join([self.folder_name, file_no_path])
         self.s3_client.upload_file(
             file_name,
             self.bucket_name,
             key,
+        )
+
+    def download_file(self, file_name, dest_path):
+        """
+        Download a single file to S3 without reading its contents
+
+        :param str file_name: full path to file
+        :param str dest_path: full path to destination
+        """
+        key = "/".join([self.folder_name, file_name])
+        self.s3_client.download_file(
+            self.bucket_name,
+            key,
+            dest_path,
         )
