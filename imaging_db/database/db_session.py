@@ -166,3 +166,36 @@ def insert_file(credentials_filename,
         )
         session.add(new_project)
         session.add(new_file_global)
+
+
+def get_filenames(credentials_filename, project_serial):
+    """
+    Get S3 folder name and all file names associated with unique
+    project identifier.
+
+    :param str credentials_filename: JSON file containing DB credentials
+    :param str project_serial: Unique identifier for file
+    """
+    # Create session
+    with session_scope(credentials_filename) as session:
+        # Check if ID already exist
+        proj = session.query(Project) \
+               .filter(Project.project_serial == project_serial).one()
+        print(proj.project_serial)
+        print(proj.sliced)
+
+        if proj.sliced is False:
+            file_global = session.query(FileGlobal) \
+                .join(Project) \
+                .filter(Project.project_serial == proj.project_serial) \
+                .one()
+            file_name = file_global.metadata_json["file_origin"]
+            file_name = file_name.split("/")[-1]
+            print(file_name)
+
+            return file_global.folder_name, [file_name]
+
+
+
+
+
