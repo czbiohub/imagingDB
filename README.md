@@ -1,17 +1,47 @@
 # Imaging Database
 
 This is a pipeline for interacting with images and their metadata using the imaging database.
-Current development focus is uploading images and metadata to the database,
-support for queries and downloads will be added as I go along.
-So far I only have some initial json validation and database connection stuff...
+Each image is assumed to be a dataset which has a unique identifier associated with
+it of the form 
+
+\<ID>-YYYY-MM-DD-HH-MM-SS-\<SSSS>
+
+where ID is a project id (e.g. ISP or ML), followed by a timestamp, and the last
+section is a four digit serial number.
+
+Below is a visualization of the database schema. (NOTE: find a better visualization 
+tool)
+
+![Database schema](db_schema.png?raw=true "Title")
+
 
 ## Getting Started
 
-These instructions will get the project up and running on your local machine.
+There are two main CLIs, data_uploader and data_downloader. The data uploader
+takes:
+ * a csv file containing file information, please see the
+ _files_for_upload.csv_ in this repository for required fields and example values.
+* a json file containing database login credentials (see db_credentials.json)
 
+If you want to validate metadata, you can specify a JSON schema file in the
+_meta_schema_ field of the csv. This metadata will be evaluated for each
+frame of the file. See metadata_schema.json for an example schema.
+
+```buildoutcfg
+python imaging_db/cli/data_uploader.py --csv files_for_upload.csv --login db_credentials.json
 ```
-Command line
+
+The data_downloader CLI takes three command line inputs: 
+* a JSON file with DB login credentials
+* a destination folder where the data will be downloaded
+* a unique dataset identifier
+
+```buildoutcfg
+python imaging_db/cli/data_downloader.py --id ID-2018-04-05-00-00-00-0001 --dest /My/local/folder --login db_credentials.json
 ```
+
+In addition to the CLIs, you can see examples on how to query data in the Jupyter
+notebook in the notebook folder.
 
 ### Prerequisites
 
@@ -28,25 +58,16 @@ for database access (see db_credentials.json)
 
 Please contact jenny.folkesson@czbiohub.org if you want to be added as a user.
 
-### Installing
-
-A step by step series of examples that tell you how to get a development env running
-
-```
-Command line
-```
-
 ## Running the tests
 
-Explain what these tests test and why
+There's currently some patchy unit test coverage which I intend to expand as
+the repository opens up to more users. Tests live in the same directory as
+the files they're testing with an appended '_tests' at the end of the file name.
+An example test run:
 
+```buildoutcfg
+nosetests imaging_db/filestorage/s3_storage_tests.py
 ```
-Give an example
-```
-
-## Deployment
-
-No.
 
 ## Built With
 
@@ -60,5 +81,3 @@ No.
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
-
-## Acknowledgments
