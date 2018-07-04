@@ -45,7 +45,7 @@ def upload_data_and_update_db(args):
         str description: Short description of file
         bool slice: Specify if the file should be sliced prior to upload
         str json_meta: If slice, give full path to json metadata schema
-        str parent_dataset_id: Parent dataset if there is one
+        str parent_dataset_id: Parent dataset unique ID if there is one
     """
     # Assert that csv file exists and load it
     assert os.path.isfile(args.csv), \
@@ -114,7 +114,9 @@ def upload_data_and_update_db(args):
 
             # Add sliced metadata to database
             try:
-                parent_dataset = eval(files_data.loc[im_nbr, "parent_dataset_id"])
+                parent_dataset = files_data.loc[im_nbr, "parent_dataset_id"]
+                if parent_dataset.lower() == "none":
+                    parent_dataset = None
                 db_session.insert_slices(
                     credentials_filename=args.login,
                     dataset_serial=dataset_serial,
@@ -150,7 +152,9 @@ def upload_data_and_update_db(args):
                 "file_origin": file_name,
             }
             try:
-                parent_dataset = eval(files_data.loc[im_nbr, "parent_dataset_id"])
+                parent_dataset = files_data.loc[im_nbr, "parent_dataset_id"]
+                if parent_dataset.lower() == "none":
+                    parent_dataset = None
                 db_session.insert_file(
                     credentials_filename=args.login,
                     dataset_serial=dataset_serial,

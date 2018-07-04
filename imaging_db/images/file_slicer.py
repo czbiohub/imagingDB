@@ -4,6 +4,11 @@ import pims
 
 import imaging_db.metadata.json_validator as json_validator
 
+# TODO: Create a metaname translator
+# For all possible versions of a required variable, translate them
+# into the standardized DF names
+# e.g. name in {"Channel", "ChannelIndex", "ChannelIdx"} -> "channel_idx"
+
 # Required metadata fields - everything else goes into a json
 META_NAMES = ["ChannelIndex",
               "Slice",
@@ -11,9 +16,6 @@ META_NAMES = ["ChannelIndex",
               "ChannelName",
               "Exposure-ms",
               "FileName"]
-
-# TODO: Create a metaname translator
-# e.g. name in {"Channel", "ChannelIndex", "ChannelIdx"} -> "channel_idx"
 
 DF_NAMES = ["channel_idx",
             "slice_idx",
@@ -35,14 +37,13 @@ def read_ome_tiff(file_name,
                   file_format=".png",
                   int2str_len=3):
     """
-    TODO: Convert this into class once we have more file types
+    TODO: Convert this into classes once we have more file types
     reads ome.tiff file into memory and separates image files and metadata.
     Workaround in case I need to read ome-xml:
     https://github.com/soft-matter/pims/issues/125
     It is assumed that all metadata lives as dicts inside tiff frame tags.
     NOTE: It seems like the IJMetadata Info field is a dict converted into
-    string, and it's only present in the first frame
-    so there will be some hacking there...
+    string, and it's only present in the first frame...
 
     :param str file_name: full path to file
     :param str schema_filename: full path to metadata json schema file
