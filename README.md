@@ -9,8 +9,7 @@ it of the form
 where ID is a project id (e.g. ISP or ML), followed by a timestamp, and the last
 section is a four digit serial number.
 
-Below is a visualization of the database schema. (NOTE: find a better visualization 
-tool)
+Below is a visualization of the database schema generated with [eralchemy](https://github.com/Alexis-benoist/eralchemy)
 
 ![Database schema](db_schema.png?raw=true "Title")
 
