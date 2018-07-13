@@ -9,7 +9,7 @@ it of the form
 where ID is a project id (e.g. ISP or ML), followed by a timestamp, and the last
 section is a four digit serial number.
 
-Below is a visualization of the database schema, generated using [eralchemy](https://github.com/Alexis-benoist/eralchemy). The arch on the top of the data_set table should connect parent_id with id, other than that it reflects the database contents.
+Below is a visualization of the database schema, generated using [eralchemy](https://github.com/Alexis-benoist/eralchemy). The arch on the top of the data_set table should connect parent_id with id, and it also doesn't show foreign keys clearly, other than that it gives an overview of schema. 
 
 ![Database schema](db_schema.png?raw=true "Title")
 
