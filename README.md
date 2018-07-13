@@ -17,8 +17,14 @@ tool)
 
 ## Getting Started
 
-There are two main CLIs, data_uploader and data_downloader. The data uploader
-takes:
+There are two main CLIs, data_uploader and data_downloader. During
+data upload, you can choose between doing 'file' or 'slice' upload type.
+File will just write the existing file as is on S3, whereas 'slice' will
+attempt to read the file, separate frames from metadata and upload each
+slice (frame) individually. Files will be written to the 'raw_files' folder
+in the S3 buckets, and slices will be written to 'raw_slices'.
+
+The data uploader takes:
  * a csv file containing file information, please see the
  _files_for_upload.csv_ in this repository for required fields and example values.
 * a json file containing database login credentials (see db_credentials.json)

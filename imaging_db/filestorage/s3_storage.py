@@ -65,6 +65,23 @@ class DataStorage:
                 Body=im_bytes,
             )
 
+    def upload_file(self, file_name):
+        """
+        Upload a single file to S3 without reading its contents
+
+        :param str file_name: full path to file
+        """
+        # ID should be unique, make sure it doesn't already exist
+        self.assert_unique_id()
+
+        file_no_path = file_name.split("/")[-1]
+        key = "/".join([self.folder_name, file_no_path])
+        self.s3_client.upload_file(
+            file_name,
+            self.bucket_name,
+            key,
+        )
+
     def fetch_im(self, file_name):
         """
         Given file name, fetch image
@@ -101,23 +118,6 @@ class DataStorage:
             im = im_utils.deserialize_im(byte_str)
             im_stack[..., im_nbr] = np.atleast_3d(im)
         return im_stack
-
-    def upload_file(self, file_name):
-        """
-        Upload a single file to S3 without reading its contents
-
-        :param str file_name: full path to file
-        """
-        # ID should be unique, make sure it doesn't already exist
-        self.assert_unique_id()
-
-        file_no_path = file_name.split("/")[-1]
-        key = "/".join([self.folder_name, file_no_path])
-        self.s3_client.upload_file(
-            file_name,
-            self.bucket_name,
-            key,
-        )
 
     def download_file(self, file_name, dest_path):
         """
