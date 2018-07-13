@@ -53,16 +53,16 @@ def upload_data_and_update_db(args):
     files_data = pd.read_csv(args.csv)
 
     # Upload all files
-    for im_nbr in range(files_data.shape[0]):
+    for im_nbr, row in files_data.iterrows():
         # Assert that ID is correctly formatted
-        dataset_serial = files_data.loc[im_nbr, "dataset_id"]
+        dataset_serial = row.dataset_id
         try:
             cli_utils.validate_id(dataset_serial)
         except AssertionError as e:
             print("Invalid ID:", e)
 
         # Assert that upload type is valid
-        upload_type = files_data.loc[im_nbr, "upload_type"].lower()
+        upload_type = row.upload_type.lower()
         assert upload_type in {"file", "slice"}, \
             "upload_type should be 'file' or 'slice', not {}".format(
                 upload_type)
@@ -74,15 +74,15 @@ def upload_data_and_update_db(args):
             print(e)
 
         # Make sure image file exists
-        file_name = files_data.loc[im_nbr, "file_name"]
+        file_name = row.file_name
         assert os.path.isfile(file_name), \
             "File doesn't exist: {}".format(file_name)
 
         # Get file description
-        description = files_data.loc[im_nbr, "description"]
+        description = row.description
 
         if upload_type == "slice":
-            meta_schema = files_data.loc[im_nbr, "meta_schema"]
+            meta_schema = row.meta_schema
 
             # Get image stack and metadata
             # ome.tif is the only file format tested at this point
@@ -114,7 +114,7 @@ def upload_data_and_update_db(args):
 
             # Add sliced metadata to database
             try:
-                parent_dataset = files_data.loc[im_nbr, "parent_dataset_id"]
+                parent_dataset = row.parent_dataset_id
                 if parent_dataset.lower() == "none":
                     parent_dataset = None
                 db_session.insert_slices(
@@ -152,7 +152,7 @@ def upload_data_and_update_db(args):
                 "file_origin": file_name,
             }
             try:
-                parent_dataset = files_data.loc[im_nbr, "parent_dataset_id"]
+                parent_dataset = row.parent_dataset_id
                 if parent_dataset.lower() == "none":
                     parent_dataset = None
                 db_session.insert_file(
