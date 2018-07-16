@@ -109,8 +109,8 @@ def read_ome_tiff(file_name,
                 slice_meta.loc[i, df_name] = meta_i[meta_name]
             else:
                 # Add special cases here
-                # ChNames is a list that should be translated to ChannelName
-                if meta_name == "ChannelName":
+                # ChNames is a list that should be translated to channel name
+                if meta_name == "ChannelName" and len(channel_names) > 0:
                     # Check if ChNames (list of names) is present
                     slice_meta.loc[i, "channel_name"] = \
                         channel_names[meta_i["ChannelIndex"]]

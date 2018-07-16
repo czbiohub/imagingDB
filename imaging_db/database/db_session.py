@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+import numpy as np
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -64,12 +65,49 @@ def json_to_uri(credentials_json):
 
 
 def test_connection(credentials_filename):
+    """
+    Test that you can connect to the database
+
+    :param srt credentials_filename: full path to login credentials
+    :raise Exception: if you can't log in
+    """
     try:
         with session_scope(credentials_filename) as session:
             session.execute('SELECT 1')
     except Exception as e:
         print("Can't connect to database", e)
         raise
+
+
+def _get_parent(session, parent_dataset, dataset_serial):
+    """
+    Find parent key if a parent dataset serial is given.
+
+    :param session: database session
+    :param parent_dataset: parent dataset serial
+    :param dataset_serial: child dataset serial to be added to db
+    :return int parent_key: primary key of parent dataset
+    """
+    parent_key = None
+    if isinstance(parent_dataset, str):
+        if parent_dataset.lower() == "none" or len(parent_dataset) == 0:
+            parent_dataset = None
+    else:
+        if np.isnan(parent_dataset):
+            parent_dataset = None
+    if parent_dataset is not None:
+        try:
+            parent = session.query(DataSet) \
+                .filter(DataSet.dataset_serial == parent_dataset).one()
+            parent_key = parent.id
+        except Exception as e:
+            print("Parent {} not found for data set {}".format(
+                parent_dataset,
+                dataset_serial,
+            ))
+            print(e)
+            raise
+    return parent_key
 
 
 def insert_slices(credentials_filename,
@@ -80,6 +118,7 @@ def insert_slices(credentials_filename,
                   slice_json_meta,
                   global_meta,
                   global_json_meta,
+                  microscope,
                   parent_dataset=None):
     """
     Insert global and local information from file that has been
@@ -92,6 +131,7 @@ def insert_slices(credentials_filename,
     :param json slice_json_meta: json object with arbitrary local metadata
     :param dict global_meta: Required global metadata fields
     :param json global_json_meta: Arbitrary global metadata
+    :param str microscope: microscope name
     :param str parent_dataset: Assign parent if not null
     """
     # Create session
@@ -102,16 +142,13 @@ def insert_slices(credentials_filename,
         assert len(datasets) == 0, \
             "Dataset {} already exists in database".format(dataset_serial)
         # If parent dataset identifier is given, find its key and insert it
-        parent_key = None
-        if parent_dataset is not None:
-            parent = session.query(DataSet) \
-                .filter(DataSet.dataset_serial == parent_dataset).one()
-            parent_key = parent.id
+        parent_key = _get_parent(session, parent_dataset, dataset_serial)
         # Insert dataset ID in the main DataSet table with sliced=True
         new_dataset = DataSet(
             dataset_serial=dataset_serial,
             description=description,
             sliced=True,
+            microscope=microscope,
             parent_id=parent_key,
         )
         # Add global slice information
@@ -148,6 +185,7 @@ def insert_file(credentials_filename,
                 description,
                 folder_name,
                 global_json_meta,
+                microscope,
                 parent_dataset=None):
     """
     Upload file as is without slicing it or extracting metadata
@@ -157,6 +195,7 @@ def insert_file(credentials_filename,
     :param str description: Short description of file
     :param str folder_name: Folder in S3 bucket where data is stored
     :param global_json_meta: Arbitrary metadata fields for file
+    :param str microscope: microscope name
     :param str parent_dataset: Assign parent if not null
     """
     # Create session
@@ -167,16 +206,13 @@ def insert_file(credentials_filename,
         assert len(datasets) == 0, \
             "Dataset {} already exists in database".format(dataset_serial)
         # If parent dataset identifier is given, find its key and insert it
-        parent_key = None
-        if parent_dataset is not None:
-            parent = session.query(DataSet) \
-                .filter(DataSet.dataset_serial == parent_dataset).one()
-            parent_key = parent.id
+        parent_key = _get_parent(session, parent_dataset, dataset_serial)
         # First insert project ID in the main Project table with sliced=True
         new_dataset = DataSet(
             dataset_serial=dataset_serial,
             description=description,
             sliced=False,
+            microscope=microscope,
             parent_id=parent_key
         )
         # Add s3 location

@@ -36,8 +36,6 @@ class DataStorage:
         :param np.array im_stack: all 2D frames from file converted to stack
         :param str file_format: file format for slices on S3
         """
-        # ID should be unique, make sure it doesn't already exist
-        self.assert_unique_id()
         # Make sure number of file names matches stack shape
         assert len(file_names) == im_stack.shape[-1], \
             "Number of file names {} doesn't match slices {}".format(
@@ -50,20 +48,23 @@ class DataStorage:
                 Bucket=self.bucket_name,
                 Prefix=key,
             )
-            assert response['KeyCount'] == 0, \
-                "Key already exists on S3: {}".format(key)
-            # Serialize image
-            im_bytes = im_utils.serialize_im(
-                im=im_stack[..., i],
-                file_format=file_format,
-            )
-            # Upload slice to S3
-            print("Writing to S3", key)
-            self.s3_client.put_object(
-                Bucket=self.bucket_name,
-                Key=key,
-                Body=im_bytes,
-            )
+            try:
+                assert response['KeyCount'] == 0, \
+                    "Key already exists on S3: {}".format(key)
+                # Serialize image
+                im_bytes = im_utils.serialize_im(
+                    im=im_stack[..., i],
+                    file_format=file_format,
+                )
+                # Upload slice to S3
+                print("Writing to S3", key)
+                self.s3_client.put_object(
+                    Bucket=self.bucket_name,
+                    Key=key,
+                    Body=im_bytes,
+                )
+            except Exception as e:
+                print("Key already exists, continuing", e)
 
     def upload_file(self, file_name):
         """

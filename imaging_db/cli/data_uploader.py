@@ -78,9 +78,6 @@ def upload_data_and_update_db(args):
         assert os.path.isfile(file_name), \
             "File doesn't exist: {}".format(file_name)
 
-        # Get file description
-        description = row.description
-
         if upload_type == "slice":
             meta_schema = row.meta_schema
 
@@ -101,10 +98,13 @@ def upload_data_and_update_db(args):
                 data_uploader = s3_storage.DataStorage(
                     folder_name=folder_name,
                 )
-                data_uploader.assert_unique_id()
+                try:
+                    data_uploader.assert_unique_id()
+                except Exception as e:
+                    print("Folder already exists, checking if all files exist")
                 # Upload image slices to S3
                 data_uploader.upload_slices(
-                    file_names=list(slice_meta["FileName"]),
+                    file_names=list(slice_meta["file_name"]),
                     im_stack=im_stack,
                 )
                 print("Slices in {} uploaded to S3".format(file_name))
@@ -114,24 +114,22 @@ def upload_data_and_update_db(args):
 
             # Add sliced metadata to database
             try:
-                parent_dataset = row.parent_dataset_id
-                if parent_dataset.lower() == "none":
-                    parent_dataset = None
                 db_session.insert_slices(
                     credentials_filename=args.login,
                     dataset_serial=dataset_serial,
-                    description=description,
+                    description=row.description,
                     slice_meta=slice_meta,
                     slice_json_meta=slice_json,
                     global_meta=global_meta,
                     folder_name=folder_name,
                     global_json_meta=global_json,
-                    parent_dataset=parent_dataset,
+                    microscope=row.microscope,
+                    parent_dataset=row.parent_dataset_id,
                 )
-                print("Slice info for {} inserted in DB" \
+                print("Slice info for {} inserted in DB"
                       .format(dataset_serial))
             except AssertionError as e:
-                print("Project {} already in DB".format(dataset_serial))
+                print("Data set {} already in DB".format(dataset_serial))
                 print(e)
         # File upload
         else:
@@ -152,16 +150,14 @@ def upload_data_and_update_db(args):
                 "file_origin": file_name,
             }
             try:
-                parent_dataset = row.parent_dataset_id
-                if parent_dataset.lower() == "none":
-                    parent_dataset = None
                 db_session.insert_file(
                     credentials_filename=args.login,
                     dataset_serial=dataset_serial,
-                    description=description,
+                    description=row.description,
                     folder_name=folder_name,
                     global_json_meta=global_json,
-                    parent_dataset=parent_dataset
+                    microscope=row.microscope,
+                    parent_dataset=row.parent_dataset_id,
                 )
                 print("File info for {} inserted in DB".format(dataset_serial))
             except AssertionError as e:

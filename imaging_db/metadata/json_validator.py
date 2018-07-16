@@ -139,12 +139,16 @@ def get_global_meta(frame, file_name):
     global_json = {
         "file_origin": file_name,
     }
-    meta_temp = frame.tags["IJMetadata"].value["Info"]
-    if isinstance(meta_temp, str):
-        meta_temp = json.loads(meta_temp)
-    global_json["IJMetadata"] = meta_temp
-    channel_names = meta_temp["ChNames"]
-    if isinstance(channel_names, str):
-        channel_names = [channel_names]
+    channel_names = []
+    try:
+        meta_temp = frame.tags["IJMetadata"].value["Info"]
+        if isinstance(meta_temp, str):
+            meta_temp = json.loads(meta_temp)
+        global_json["IJMetadata"] = meta_temp
+        channel_names = meta_temp["ChNames"]
+        if isinstance(channel_names, str):
+            channel_names = [channel_names]
+    except Exception as e:
+        print("Can't read IJMetadata", e)
 
     return global_json, channel_names

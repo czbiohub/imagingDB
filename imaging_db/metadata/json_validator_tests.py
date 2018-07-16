@@ -91,3 +91,4 @@ def test_not_a_schema():
 @nose.tools.raises(FileNotFoundError)
 def test_nonexisting_json():
     json_object = json_validator.read_json_file("not_a_json_file.json")
+
