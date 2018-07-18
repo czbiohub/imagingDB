@@ -1,7 +1,7 @@
 dataset_id,file_name,description,upload_type,meta_schema,microscope,parent_dataset_id
 ML-2018-04-05-08-55-00-0001,/Users/jenny.folkesson/Data/microscopy/BlankSlide_DAPI_TxRed_BF_Phase.lif,This is a blank slide for testing,file,None,None,None
-ISP-2018-06-08-15-45-00-0001,/Users/jenny.folkesson/Data/microscopy/ISP_293T_TFRC_sgRNA2_20180601_1_MMStack_Pos1.ome.tif,This is what I assume is a typical ome-tif file,slice,/Users/jenny.folkesson/Code/imagingDB/metadata_schema.json,None,None
+ISP-2018-06-08-15-45-00-0001,/Users/jenny.folkesson/Data/microscopy/ISP_293T_TFRC_sgRNA2_20180601_1_MMStack_Pos1.ome.tif,This is what I assume is a typical ome-tif file,frames,/Users/jenny.folkesson/Code/imagingDB/metadata_schema.json,None,None
 ML-2018-04-05-08-55-00-0002,/Users/jenny.folkesson/Data/microscopy/BlankSlide_DAPI_TxRed_BF_Phase.lif,I'm pretending this is a child of the first lif file,file,None,None,ML-2018-04-05-08-55-00-0001
-ISP-2018-06-08-00-00-00-0001,/Users/jenny.folkesson/Data/microscopy/ISP_200nm_BeadStack_40x_1-3NA_1-0x_FullColor_20180608_1_MMStack_Pos0.ome.tif,One more ome tif from Kevin,slice,/Users/jenny.folkesson/Code/imagingDB/metadata_schema.json,,
-ISP-2018-06-08-00-00-00-0002,/Users/jenny.folkesson/Data/microscopy/ISP_200nm_BeadStack_40x_1-3NA_1-0x_20180608_2_MMStack_Pos0.ome.tif,Last test file from Kevin,slice,/Users/jenny.folkesson/Code/imagingDB/metadata_schema.json,,
-ISP-2018-06-01-00-00-00-0002,/Users/jenny.folkesson/Data/microscopy/ISP_293T_TFRC_blank_20180601_1_MMStack_Pos2.ome.tif,New test ome tif,slice,/Users/jenny.folkesson/Code/imagingDB/metadata_schema.json,,
+ISP-2018-06-08-00-00-00-0001,/Users/jenny.folkesson/Data/microscopy/ISP_200nm_BeadStack_40x_1-3NA_1-0x_FullColor_20180608_1_MMStack_Pos0.ome.tif,One more ome tif from Kevin,frames,/Users/jenny.folkesson/Code/imagingDB/metadata_schema.json,,
+ISP-2018-06-08-00-00-00-0002,/Users/jenny.folkesson/Data/microscopy/ISP_200nm_BeadStack_40x_1-3NA_1-0x_20180608_2_MMStack_Pos0.ome.tif,Last test file from Kevin,frames,/Users/jenny.folkesson/Code/imagingDB/metadata_schema.json,,
+ISP-2018-06-01-00-00-00-0002,/Users/jenny.folkesson/Data/microscopy/ISP_293T_TFRC_blank_20180601_1_MMStack_Pos2.ome.tif,New test ome tif,frames,/Users/jenny.folkesson/Code/imagingDB/metadata_schema.json,,
