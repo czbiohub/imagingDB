@@ -159,7 +159,7 @@ def insert_frames(credentials_filename,
             "Dataset {} already exists in database".format(dataset_serial)
         # If parent dataset identifier is given, find its key and insert it
         parent_key = _get_parent(session, parent_dataset, dataset_serial)
-        # Insert dataset ID in the main DataSet table with sliced=True
+        # Insert dataset ID in the main DataSet table with frames=True
         new_dataset = DataSet(
             dataset_serial=dataset_serial,
             description=description,
@@ -167,7 +167,7 @@ def insert_frames(credentials_filename,
             microscope=microscope,
             parent_id=parent_key,
         )
-        # Add global slice information
+        # Add global frame information
         new_frames_global = FramesGlobal(
             nbr_frames=global_meta["nbr_frames"],
             im_width=global_meta["im_width"],
@@ -181,7 +181,7 @@ def insert_frames(credentials_filename,
             data_set=new_dataset,
         )
         for i in range(frames_meta.shape[0]):
-            # Insert all slices here then add them to new sliced global
+            # Insert all frames here then add them to new frames global
             new_frame = Frames(
                 channel_idx=frames_meta.loc[i, "channel_idx"],
                 slice_idx=frames_meta.loc[i, "slice_idx"],
@@ -205,7 +205,7 @@ def insert_file(credentials_filename,
                 microscope,
                 parent_dataset=None):
     """
-    Upload file as is without slicing it or extracting metadata
+    Upload file as is without splitting it to frames or extracting metadata
 
     :param str credentials_filename: JSON file containing DB credentials
     :param str dataset_serial: Unique identifier for file
@@ -224,7 +224,7 @@ def insert_file(credentials_filename,
             "Dataset {} already exists in database".format(dataset_serial)
         # If parent dataset identifier is given, find its key and insert it
         parent_key = _get_parent(session, parent_dataset, dataset_serial)
-        # First insert project ID in the main Project table with sliced=True
+        # First insert project ID in the main Project table with frames=False
         new_dataset = DataSet(
             dataset_serial=dataset_serial,
             description=description,
@@ -274,7 +274,7 @@ def get_filenames(credentials_filename, dataset_serial):
                 .filter(DataSet.dataset_serial == dataset.dataset_serial) \
                 .all()
 
-            folder_name = frames[0].sliced_global.folder_name
+            folder_name = frames[0].frames_global.folder_name
             file_names = []
             for f in frames:
                 file_names.append(f.file_name)

@@ -95,7 +95,7 @@ def upload_data_and_update_db(args):
             # Folder name in S3 bucket
             folder_name = "/".join([FRAME_FOLDER_NAME,
                                     dataset_serial])
-            # Extract slices and metadata from file
+            # Extract frames and metadata from file
             im_stack, frames_meta, frames_json, global_meta, global_json = \
                 file_splitter.read_ome_tiff(
                     file_name=file_name,
@@ -107,7 +107,7 @@ def upload_data_and_update_db(args):
                 )
                 if args.override == 0:
                     data_uploader.assert_unique_id()
-                # Upload image slices to S3
+                # Upload stack frames to S3
                 data_uploader.upload_frames(
                     file_names=list(frames_meta["file_name"]),
                     im_stack=im_stack,

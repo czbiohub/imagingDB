@@ -25,7 +25,7 @@ MICROMETA_SCHEMA = {
         "FrameIndex": {"type": "integer"},
         "Exposure-ms": {"type": "number"},
     },
-    "required": ["ChannelIndex", "Slice", "FrameIndex", "Exposure-ms"]
+    "required": ["ChannelIndex", "Slice", "FrameIndex"]
 }
 
 
@@ -134,7 +134,7 @@ def get_global_meta(frame, file_name):
     :param TiffPage frame: first frame containing IJMetadata
     :param str file_name: full path to origin file
     :return dict global_json: global metadata, IJMetadata + file name
-    :return list channel_names: channel names for slice metadata
+    :return list channel_names: channel names for frame metadata
     """
     global_json = {
         "file_origin": file_name,

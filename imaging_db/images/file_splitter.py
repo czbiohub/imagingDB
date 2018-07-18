@@ -83,8 +83,8 @@ def read_ome_tiff(file_name,
     )
 
     # Convert frames to numpy stack and collect metadata
-    # Separate structure metadata (with known fields)
-    # from unstructured, which goes slice_json
+    # Separate structured metadata (with known fields)
+    # from unstructured, the latter goes into frames_json
     frames_meta = pd.DataFrame(
         index=range(global_meta["nbr_frames"]),
         columns=DF_NAMES)
