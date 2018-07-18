@@ -17,7 +17,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--id', type=str, help="Unique dataset identifier")
     parser.add_argument('--dest', type=str, help="Destination folder")
-    parser.add_argument('--login', type=str, help="Full path to file" \
+    parser.add_argument('--login', type=str, help="Full path to file"
                         "containing JSON with DB login credentials")
 
     return parser.parse_args()

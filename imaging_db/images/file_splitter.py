@@ -14,14 +14,12 @@ META_NAMES = ["ChannelIndex",
               "Slice",
               "FrameIndex",
               "ChannelName",
-              "Exposure-ms",
               "FileName"]
 
 DF_NAMES = ["channel_idx",
             "slice_idx",
             "frame_idx",
             "channel_name",
-            "exposure_ms",
             "file_name"]
 
 def get_imname(meta_i, file_format, int2str_len):
@@ -38,7 +36,7 @@ def read_ome_tiff(file_name,
                   int2str_len=3):
     """
     TODO: Convert this into classes once we have more file types
-    reads ome.tiff file into memory and separates image files and metadata.
+    reads ome.tiff file into memory and separates image frames and metadata.
     Workaround in case I need to read ome-xml:
     https://github.com/soft-matter/pims/issues/125
     It is assumed that all metadata lives as dicts inside tiff frame tags.
@@ -51,8 +49,8 @@ def read_ome_tiff(file_name,
     :param int int2str_len: format file name using ints converted to specific
         string length
     :return np.array im_stack: image stack
-    :return pd.DataFrame slice_meta: associated metadata for each slice
-    :return dict slice_json: wildcard metadata for each slice
+    :return pd.DataFrame frames_meta: associated metadata for each frame
+    :return dict frames_json: wildcard metadata for each frame
     :return dict global_meta: global metadata for file
     """
     frames = pims.TiffStack(file_name)
@@ -87,12 +85,12 @@ def read_ome_tiff(file_name,
     # Convert frames to numpy stack and collect metadata
     # Separate structure metadata (with known fields)
     # from unstructured, which goes slice_json
-    slice_meta = pd.DataFrame(
+    frames_meta = pd.DataFrame(
         index=range(global_meta["nbr_frames"]),
         columns=DF_NAMES)
     # Pandas doesn't really support inserting dicts into dataframes,
     # so micromanager metadata goes into a separate list
-    slice_json = []
+    frames_json = []
     for i in range(global_meta["nbr_frames"]):
         frame = frames._tiff[i]
         im_stack[..., i] = np.atleast_3d(frame.asarray())
@@ -102,24 +100,30 @@ def read_ome_tiff(file_name,
             meta_schema=meta_schema,
             validate=True,
         )
-        slice_json.append(json_i)
+        frames_json.append(json_i)
         # Add required metadata fields to data frame
         for meta_name, df_name in zip(META_NAMES, DF_NAMES):
             if meta_name in meta_i.keys():
-                slice_meta.loc[i, df_name] = meta_i[meta_name]
+                frames_meta.loc[i, df_name] = meta_i[meta_name]
             else:
                 # Add special cases here
                 # ChNames is a list that should be translated to channel name
                 if meta_name == "ChannelName" and len(channel_names) > 0:
                     # Check if ChNames (list of names) is present
-                    slice_meta.loc[i, "channel_name"] = \
+                    frames_meta.loc[i, "channel_name"] = \
                         channel_names[meta_i["ChannelIndex"]]
 
         # Create a file name and add it
-        im_name = get_imname(slice_meta.loc[i], file_format, int2str_len)
-        slice_meta.loc[i, "file_name"] = im_name
+        im_name = get_imname(frames_meta.loc[i], file_format, int2str_len)
+        frames_meta.loc[i, "file_name"] = im_name
+    # Lastly, add z and nbr of channels to global_meta now that we have them
+    global_meta["im_depth"] = len(np.unique(frames_meta["slice_idx"]))
+    global_meta["nbr_channels"] = len(np.unique(
+        frames_meta["channel_idx"]))
+    print("depth", global_meta["im_depth"])
+    print("channels", global_meta["nbr_channels"])
 
-    return im_stack, slice_meta, slice_json, global_meta, global_json
+    return im_stack, frames_meta, frames_json, global_meta, global_json
 
 
 

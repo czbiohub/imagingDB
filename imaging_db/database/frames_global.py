@@ -7,16 +7,18 @@ from sqlalchemy.orm import relationship, backref
 from imaging_db.database.base import Base
 
 
-class SlicedGlobal(Base):
+class FramesGlobal(Base):
     """
     Table for files that have been decomposed into 2D slices
     """
-    __tablename__ = 'sliced_global'
+    __tablename__ = 'frames_global'
 
     id = Column(Integer, primary_key=True)
     nbr_frames = Column(Integer)
     im_width = Column(Integer)
     im_height = Column(Integer)
+    im_depth = Column(Integer)
+    nbr_channels = Column(Integer)
     im_colors = Column(Integer)
     bit_depth = Column(String)
     folder_name = Column(String)
@@ -27,12 +29,14 @@ class SlicedGlobal(Base):
     dataset_id = Column(Integer, ForeignKey('data_set.id'))
     # Provide one to one mapping with dataset
     data_set = relationship("DataSet",
-                           backref=backref("sliced_global", uselist=False))
+                           backref=backref("frames_global", uselist=False))
 
     def __init__(self,
                  nbr_frames,
                  im_width,
                  im_height,
+                 im_depth,
+                 nbr_channels,
                  im_colors,
                  bit_depth,
                  folder_name,
@@ -41,6 +45,8 @@ class SlicedGlobal(Base):
         self.nbr_frames = nbr_frames
         self.im_width = im_width
         self.im_height = im_height
+        self.im_depth = im_depth
+        self.nbr_channels = nbr_channels
         self.im_colors = im_colors
         self.bit_depth = bit_depth
         self.folder_name = folder_name

@@ -5,8 +5,8 @@ from sqlalchemy.orm import sessionmaker
 
 from imaging_db.database.base import Base
 from imaging_db.database.file_global import FileGlobal
-from imaging_db.database.sliced_global import SlicedGlobal
-from imaging_db.database.slices import Slices
+from imaging_db.database.frames_global import FramesGlobal
+from imaging_db.database.frames import Frames
 from imaging_db.database.dataset import DataSet
 import imaging_db.metadata.json_validator as json_validator
 
@@ -79,6 +79,21 @@ def test_connection(credentials_filename):
         raise
 
 
+def assert_unique_id(credentials_filename, dataset_serial):
+    """
+    Make sure dataset is not already in database using assertion.
+
+    :param credentials_filename: full path to login credentials
+    :param dataset_serial: unique identifer for dataset
+    """
+    with session_scope(credentials_filename) as session:
+        # Check if ID already exist
+        datasets = session.query(DataSet) \
+            .filter(DataSet.dataset_serial == dataset_serial).all()
+        assert len(datasets) == 0, \
+            "Dataset {} already exists in database".format(dataset_serial)
+
+
 def _get_parent(session, parent_dataset, dataset_serial):
     """
     Find parent key if a parent dataset serial is given.
@@ -110,12 +125,12 @@ def _get_parent(session, parent_dataset, dataset_serial):
     return parent_key
 
 
-def insert_slices(credentials_filename,
+def insert_frames(credentials_filename,
                   dataset_serial,
                   description,
                   folder_name,
-                  slice_meta,
-                  slice_json_meta,
+                  frames_meta,
+                  frames_json_meta,
                   global_meta,
                   global_json_meta,
                   microscope,
@@ -127,8 +142,9 @@ def insert_slices(credentials_filename,
     :param str dataset_serial: Unique identifier for file
     :param str description: Short description of file
     :param str folder_name: Folder in S3 bucket where data is stored
-    :param dataframe slice_meta: Dataframe containing mandatory slice fields
-    :param json slice_json_meta: json object with arbitrary local metadata
+    :param dataframe frames_meta: Dataframe containing mandatory fields for
+        each frame
+    :param json frames_json_meta: json object with arbitrary local metadata
     :param dict global_meta: Required global metadata fields
     :param json global_json_meta: Arbitrary global metadata
     :param str microscope: microscope name
@@ -147,37 +163,38 @@ def insert_slices(credentials_filename,
         new_dataset = DataSet(
             dataset_serial=dataset_serial,
             description=description,
-            sliced=True,
+            frames=True,
             microscope=microscope,
             parent_id=parent_key,
         )
         # Add global slice information
-        new_sliced_global = SlicedGlobal(
+        new_frames_global = FramesGlobal(
             nbr_frames=global_meta["nbr_frames"],
             im_width=global_meta["im_width"],
             im_height=global_meta["im_height"],
+            im_depth=global_meta["im_depth"],
+            nbr_channels=global_meta["nbr_channels"],
             im_colors=global_meta["im_colors"],
             bit_depth=global_meta["bit_depth"],
             folder_name = folder_name,
             metadata_json=global_json_meta,
             data_set=new_dataset,
         )
-        for i in range(slice_meta.shape[0]):
+        for i in range(frames_meta.shape[0]):
             # Insert all slices here then add them to new sliced global
-            temp_slice = Slices(
-                channel_idx=slice_meta.loc[i, "channel_idx"],
-                slice_idx=slice_meta.loc[i, "slice_idx"],
-                frame_idx=slice_meta.loc[i, "frame_idx"],
-                exposure_ms=slice_meta.loc[i, "exposure_ms"],
-                channel_name=slice_meta.loc[i, "channel_name"],
-                file_name=slice_meta.loc[i, "file_name"],
-                metadata_json=slice_json_meta[i],
-                sliced_global=new_sliced_global,
+            new_frame = Frames(
+                channel_idx=frames_meta.loc[i, "channel_idx"],
+                slice_idx=frames_meta.loc[i, "slice_idx"],
+                frame_idx=frames_meta.loc[i, "frame_idx"],
+                channel_name=frames_meta.loc[i, "channel_name"],
+                file_name=frames_meta.loc[i, "file_name"],
+                metadata_json=frames_json_meta[i],
+                frames_global=new_frames_global,
             )
-            session.add(temp_slice)
+            session.add(new_frame)
 
         session.add(new_dataset)
-        session.add(new_sliced_global)
+        session.add(new_frames_global)
 
 
 def insert_file(credentials_filename,
@@ -211,7 +228,7 @@ def insert_file(credentials_filename,
         new_dataset = DataSet(
             dataset_serial=dataset_serial,
             description=description,
-            sliced=False,
+            frames=False,
             microscope=microscope,
             parent_id=parent_key
         )
@@ -239,7 +256,7 @@ def get_filenames(credentials_filename, dataset_serial):
         dataset = session.query(DataSet) \
                .filter(DataSet.dataset_serial == dataset_serial).one()
 
-        if dataset.sliced is False:
+        if dataset.frames is False:
             # Get file
             file_global = session.query(FileGlobal) \
                 .join(DataSet) \
@@ -250,17 +267,17 @@ def get_filenames(credentials_filename, dataset_serial):
 
             return file_global.folder_name, [file_name]
         else:
-            # Get slices
-            slices = session.query(Slices) \
-                .join(SlicedGlobal) \
+            # Get frames
+            frames = session.query(Frames) \
+                .join(FramesGlobal) \
                 .join(DataSet) \
                 .filter(DataSet.dataset_serial == dataset.dataset_serial) \
                 .all()
 
-            folder_name = slices[0].sliced_global.folder_name
+            folder_name = frames[0].sliced_global.folder_name
             file_names = []
-            for s in slices:
-                file_names.append(s.file_name)
+            for f in frames:
+                file_names.append(f.file_name)
 
             return folder_name, file_names
 

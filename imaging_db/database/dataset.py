@@ -12,12 +12,12 @@ class DataSet(Base):
     dataset_serial = Column(String)
     description = Column(String)
     microscope = Column(String)
-    sliced = Column(Boolean)
+    frames = Column(Boolean)
     parent_id = Column(Integer, ForeignKey("data_set.id"))
 
-    def __init__(self, dataset_serial, description, microscope, sliced, parent_id):
+    def __init__(self, dataset_serial, description, microscope, frames, parent_id):
         self.dataset_serial = dataset_serial
         self.description = description
         self.microscope = microscope
-        self.sliced = sliced
+        self.frames = frames
         self.parent_id = parent_id
