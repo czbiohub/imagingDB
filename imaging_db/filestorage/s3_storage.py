@@ -28,9 +28,9 @@ class DataStorage:
         assert response['KeyCount'] == 0, \
             "Key already exists on S3: {}".format(self.folder_name)
 
-    def upload_slices(self, file_names, im_stack, file_format=".png"):
+    def upload_frames(self, file_names, im_stack, file_format=".png"):
         """
-        Upload all slices to S3
+        Upload all frames to S3
 
         :param list of str file_names: image file names
         :param np.array im_stack: all 2D frames from file converted to stack

@@ -20,8 +20,7 @@
       "required": [
         "ChannelIndex",
         "Slice",
-        "FrameIndex",
-        "Exposure-ms"
+        "FrameIndex"
       ]
     }
   },

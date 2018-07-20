@@ -17,18 +17,19 @@ Below is a visualization of the database schema, generated using [eralchemy](htt
 ## Getting Started
 
 There are two main CLIs, data_uploader and data_downloader. During
-data upload, you can choose between doing 'file' or 'slice' upload type.
-File will just write the existing file as is on S3, whereas 'slice' will
+data upload, you can choose between doing 'file' or 'frames' upload type.
+File will just write the existing file as is on S3, whereas 'frames'' will
 attempt to read the file, separate frames from metadata and upload each
-slice (frame) individually. Files will be written to the 'raw_files' folder
-in the S3 buckets, and slices will be written to 'raw_slices'.
+frame individually as a png, and write both global and frame level metadata to 
+the database. Files will be written to the 'raw_files' folder
+in the S3 buckets, and frames will be written to 'raw_frames'.
 
 The data uploader takes:
  * a csv file containing file information, please see the
  _files_for_upload.csv_ in this repository for required fields and example values.
 * a json file containing database login credentials (see db_credentials.json)
 
-If you want to validate metadata, you can specify a JSON schema file in the
+If you want to validate metadata for each frame, you can specify a JSON schema file in the
 _meta_schema_ field of the csv. This metadata will be evaluated for each
 frame of the file. See metadata_schema.json for an example schema.
 
@@ -58,10 +59,10 @@ You will need to have a biohub AWS account and to configure your AWS CLI with yo
 aws configure
 ```
 #### The database lives in an AWS PostgreSQL RDS
-You will need to be added as a user there too, and add your username and password in a json file
+You will need to be added as a user there too, and add your username, password and the host in a json file
 for database access (see db_credentials.json)
 
-Please contact jenny.folkesson@czbiohub.org if you want to be added as a user.
+Please contact Jenny on Slack (or jenny.folkesson@czbiohub.org) if you want to be added as a user.
 
 ## Running the tests
 

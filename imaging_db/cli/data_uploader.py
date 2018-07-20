@@ -7,11 +7,11 @@ import pandas as pd
 import imaging_db.cli.cli_utils as cli_utils
 import imaging_db.database.db_session as db_session
 import imaging_db.filestorage.s3_storage as s3_storage
-import imaging_db.images.file_slicer as file_slicer
+import imaging_db.images.file_splitter as file_splitter
 
 FILE_FOLDER_NAME = "raw_files"
-SLICE_FOLDER_NAME = "raw_slices"
-SLICE_FILE_FORMAT = ".png"
+FRAME_FOLDER_NAME = "raw_frames"
+FRAME_FILE_FORMAT = ".png"
 
 
 def parse_args():
@@ -22,8 +22,12 @@ def parse_args():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--csv', type=str, help="Full path to csv file")
-    parser.add_argument('--login', type=str, help="Full path to file" \
+    parser.add_argument('--login', type=str, help="Full path to file"
                         "containing JSON with DB login credentials")
+    parser.add_argument('--override', type=int, default=0,
+                        help="In case of interruption, set to 1 and this"
+                             "t will continue upload where it stopped. Use"
+                             "with caution.")
 
     return parser.parse_args()
 
@@ -43,7 +47,7 @@ def upload_data_and_update_db(args):
         str dataset_id: Unique dataset ID <ID>-YYYY-MM-DD-HH-MM-SS-<SSSS>
         str file_name: Full path to file to be uploaded
         str description: Short description of file
-        bool slice: Specify if the file should be sliced prior to upload
+        bool frames: Specify if the file should be split prior to upload
         str json_meta: If slice, give full path to json metadata schema
         str parent_dataset_id: Parent dataset unique ID if there is one
     """
@@ -63,8 +67,8 @@ def upload_data_and_update_db(args):
 
         # Assert that upload type is valid
         upload_type = row.upload_type.lower()
-        assert upload_type in {"file", "slice"}, \
-            "upload_type should be 'file' or 'slice', not {}".format(
+        assert upload_type in {"file", "frames"}, \
+            "upload_type should be 'file' or 'frames', not {}".format(
                 upload_type)
 
         # First, make sure we can connect to the database
@@ -72,13 +76,16 @@ def upload_data_and_update_db(args):
             db_session.test_connection(args.login)
         except Exception as e:
             print(e)
+        # Make sure dataset is not already in database
+        if args.override == 0:
+            db_session.assert_unique_id(args.login, dataset_serial)
 
         # Make sure image file exists
         file_name = row.file_name
         assert os.path.isfile(file_name), \
             "File doesn't exist: {}".format(file_name)
 
-        if upload_type == "slice":
+        if upload_type == "frames":
             meta_schema = row.meta_schema
 
             # Get image stack and metadata
@@ -86,47 +93,45 @@ def upload_data_and_update_db(args):
             assert file_name[-8:] == ".ome.tif", \
                 "Only supporting .ome.tif files for now"
             # Folder name in S3 bucket
-            folder_name = "/".join([SLICE_FOLDER_NAME,
+            folder_name = "/".join([FRAME_FOLDER_NAME,
                                     dataset_serial])
-            # Extract slices and metadata from file
-            im_stack, slice_meta, slice_json, global_meta, global_json = \
-                file_slicer.read_ome_tiff(
+            # Extract frames and metadata from file
+            im_stack, frames_meta, frames_json, global_meta, global_json = \
+                file_splitter.read_ome_tiff(
                     file_name=file_name,
                     schema_filename=meta_schema,
-                    file_format=SLICE_FILE_FORMAT)
+                    file_format=FRAME_FILE_FORMAT)
             try:
                 data_uploader = s3_storage.DataStorage(
                     folder_name=folder_name,
                 )
-                try:
+                if args.override == 0:
                     data_uploader.assert_unique_id()
-                except Exception as e:
-                    print("Folder already exists, checking if all files exist")
-                # Upload image slices to S3
-                data_uploader.upload_slices(
-                    file_names=list(slice_meta["file_name"]),
+                # Upload stack frames to S3
+                data_uploader.upload_frames(
+                    file_names=list(frames_meta["file_name"]),
                     im_stack=im_stack,
                 )
-                print("Slices in {} uploaded to S3".format(file_name))
+                print("Frames in {} uploaded to S3".format(file_name))
             except AssertionError as e:
                 print("Project already on S3, moving on to DB entry")
                 print(e)
 
             # Add sliced metadata to database
             try:
-                db_session.insert_slices(
+                db_session.insert_frames(
                     credentials_filename=args.login,
                     dataset_serial=dataset_serial,
                     description=row.description,
-                    slice_meta=slice_meta,
-                    slice_json_meta=slice_json,
+                    frames_meta=frames_meta,
+                    frames_json_meta=frames_json,
                     global_meta=global_meta,
                     folder_name=folder_name,
                     global_json_meta=global_json,
                     microscope=row.microscope,
                     parent_dataset=row.parent_dataset_id,
                 )
-                print("Slice info for {} inserted in DB"
+                print("Frame info for {} inserted in DB"
                       .format(dataset_serial))
             except AssertionError as e:
                 print("Data set {} already in DB".format(dataset_serial))
