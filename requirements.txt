@@ -10,3 +10,4 @@ pims
 psycopg2
 testfixtures
 sqlalchemy
+tqdm
