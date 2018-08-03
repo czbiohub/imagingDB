@@ -2,6 +2,7 @@ import boto3
 import numpy as np
 
 import imaging_db.utils.image_utils as im_utils
+from tqdm import tqdm
 
 
 class DataStorage:
@@ -100,7 +101,7 @@ class DataStorage:
         im = im_utils.deserialize_im(byte_str)
         return im
 
-    def fetch_im_stack(self, file_names, stack_shape, bit_depth):
+    def fetch_im_stack(self, file_names, stack_shape, bit_depth, verbose=False):
         """
         Given file names, fetch images and return image stack
 
@@ -109,16 +110,35 @@ class DataStorage:
         :return np.array im_stack: stack of 2D images
         """
         im_stack = np.zeros(stack_shape, dtype=bit_depth)
-        for im_nbr in range(len(file_names)):
-            key = "/".join([self.folder_name, file_names[im_nbr]])
-            byte_str = self.s3_client.get_object(
-                Bucket=self.bucket_name,
-                Key=key,
-            )['Body'].read()
-            # Construct an array from the bytes and decode image
-            im = im_utils.deserialize_im(byte_str)
-            im_stack[..., im_nbr] = np.atleast_3d(im)
+
+        if verbose:
+            for im_nbr in tqdm(range(len(file_names))):
+                im = self.get_frame(file_names[im_nbr])
+                im_stack[..., im_nbr] = np.atleast_3d(im)
+
+        else:
+            for im_nbr in range(len(file_names)):
+                im = self.get_frame(file_names[im_nbr])
+                im_stack[..., im_nbr] = np.atleast_3d(im)
+
         return im_stack
+
+    def get_frame(self, file_name):
+        """
+        Download a single frame from S3 to a numpy array
+
+        :param str file_name: name of the file to be downloaded
+        """
+
+        key = "/".join([self.folder_name, file_name])
+        byte_str = self.s3_client.get_object(
+            Bucket=self.bucket_name,
+            Key=key,
+        )['Body'].read()
+        # Construct an array from the bytes and decode image
+        frame = im_utils.deserialize_im(byte_str)
+
+        return frame
 
     def download_file(self, file_name, dest_path):
         """
