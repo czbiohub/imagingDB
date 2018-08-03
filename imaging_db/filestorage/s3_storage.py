@@ -113,27 +113,26 @@ class DataStorage:
 
         if verbose:
             for im_nbr in tqdm(range(len(file_names))):
-                key = "/".join([self.folder_name, file_names[im_nbr]])
-                byte_str = self.s3_client.get_object(
-                    Bucket=self.bucket_name,
-                    Key=key,
-                )['Body'].read()
-                # Construct an array from the bytes and decode image
-                im = im_utils.deserialize_im(byte_str)
+                im = self.get_frame(file_names[im_nbr])
                 im_stack[..., im_nbr] = np.atleast_3d(im)
 
         else:
             for im_nbr in range(len(file_names)):
-                key = "/".join([self.folder_name, file_names[im_nbr]])
-                byte_str = self.s3_client.get_object(
-                    Bucket=self.bucket_name,
-                    Key=key,
-                )['Body'].read()
-                # Construct an array from the bytes and decode image
-                im = im_utils.deserialize_im(byte_str)
+                im = self.get_frame(file_names[im_nbr])
                 im_stack[..., im_nbr] = np.atleast_3d(im)
 
         return im_stack
+
+    def get_frame(self, file_name):
+        key = "/".join([self.folder_name, file_name])
+        byte_str = self.s3_client.get_object(
+            Bucket=self.bucket_name,
+            Key=key,
+        )['Body'].read()
+        # Construct an array from the bytes and decode image
+        frame = im_utils.deserialize_im(byte_str)
+
+        return frame
 
     def download_file(self, file_name, dest_path):
         """
