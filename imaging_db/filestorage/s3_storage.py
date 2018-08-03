@@ -124,6 +124,12 @@ class DataStorage:
         return im_stack
 
     def get_frame(self, file_name):
+        """
+        Download a single frame from S3 to a numpy array
+
+        :param str file_name: name of the file to be downloaded
+        """
+
         key = "/".join([self.folder_name, file_name])
         byte_str = self.s3_client.get_object(
             Bucket=self.bucket_name,
