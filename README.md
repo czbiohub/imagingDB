@@ -4,7 +4,7 @@ This is a pipeline for interacting with images and their metadata using the imag
 Each image is assumed to be a dataset which has a unique identifier associated with
 it of the form 
 
-\<ID>-YYYY-MM-DD-HH-MM-SS-\<SSSS>
+\<ID>-YYYY-MM-DD-HH-MM-SS-\<XXXX>
 
 where ID is a project id (e.g. ISP or ML), followed by a timestamp, and the last
 section is a four digit serial number.
