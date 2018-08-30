@@ -291,8 +291,9 @@ def _get_meta_from_frames(frames):
     Eextract global meta as well as info for each frame given
     a frames query.
 
-    :param Frames frames:
-    :return:
+    :param list of Frames frames: Frames obtained from dataset query
+    :return dict global_meta: Global metadata for dataset
+    :return dataframe frames_info: Metadata for each frame
     """
     # Collect global metadata that can be used to instantiate im_stack
     global_meta = []
@@ -316,7 +317,7 @@ def _get_meta_from_frames(frames):
             f.channel_idx,
             f.slice_idx,
             f.frame_idx,
-            os.path.join(global_meta["folder_name"], f.file_name),
+            f.file_name,
         ]
     return global_meta, frames_info
 
@@ -325,10 +326,13 @@ def get_frames_info(credentials_filename, dataset_serial):
     """
     Get information for all frames in dataset associated with unique
     project identifier.
+    TODO: Add support for only retrieving select channels
+    (or whatever data subsets users are typically interested in)
 
     :param str credentials_filename: JSON file containing DB credentials
     :param str dataset_serial: Unique identifier for file
-    :return dataframe frames_info:
+    :return dict global_meta: Global metadata for dataset
+    :return dataframe frames_info: Metadata for each frame
     """
     # Create session
     with session_scope(credentials_filename) as session:
@@ -339,7 +343,7 @@ def get_frames_info(credentials_filename, dataset_serial):
         assert dataset.frames is True,\
             "This dataset has not been split into frames"
 
-        # Get frames
+        # Get frames in datset
         frames = session.query(Frames) \
             .join(FramesGlobal) \
             .join(DataSet) \

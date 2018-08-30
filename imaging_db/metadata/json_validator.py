@@ -95,6 +95,19 @@ def read_json_file(json_filename, schema_name=None):
     return json_object
 
 
+def write_json_file(meta_dict, json_filename):
+    """
+    Writes dict to json file
+    TODO: Not validating anything but belongs with jsons... change file name?
+
+    :param dict meta_dict: Dict to be saved as json
+    :param json_filename: json file name with full path
+    """
+    json_dump = json.dumps(meta_dict)
+    with open(json_filename, "w") as write_file:
+        write_file.write(json_dump)
+
+
 def get_metadata_from_tags(frame, meta_schema, validate=True):
     """
     Populates metadata dict based on user specified schema
