@@ -37,10 +37,13 @@ frame of the file. See metadata_schema.json for an example schema.
 python imaging_db/cli/data_uploader.py --csv files_for_upload.csv --login db_credentials.json
 ```
 
-The data_downloader CLI takes three command line inputs: 
-* a JSON file with DB login credentials
-* a destination folder where the data will be downloaded
-* a unique dataset identifier
+The data_downloader CLI takes the following command line inputs: 
+* _login:_ a JSON file with DB login credentials
+* _dest:_ a destination folder where the data will be downloaded
+* _id:_ a unique dataset identifier
+* _metadata:_ (default True) For files split to frames only. Writes metadata
+            global metadata in json, local for each frame in csv
+* _download:_ (default True) For Frames, there's the option of only retrieving the metadata files  
 
 ```buildoutcfg
 python imaging_db/cli/data_downloader.py --id ID-2018-04-05-00-00-00-0001 --dest /My/local/folder --login db_credentials.json

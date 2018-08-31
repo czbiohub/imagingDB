@@ -111,7 +111,7 @@ def download_data(args):
         # Write info for each frame to dest folder
         local_meta_filename = os.path.join(
             dest_folder,
-            "frames_info.json",
+            "frames_info.csv",
         )
         frames_info.to_csv(local_meta_filename, sep=",")
         # Extract folder and file names if we want to download

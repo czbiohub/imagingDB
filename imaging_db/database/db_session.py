@@ -312,7 +312,8 @@ def _get_meta_from_frames(frames):
     # Get metadata and oath for each frame
     frames_info = pd.DataFrame(
         index=range(global_meta["nbr_frames"]),
-        columns=col_names)
+        columns=col_names,
+    )
     for i, f in enumerate(frames):
         frames_info.loc[i] = [
             f.channel_idx,
