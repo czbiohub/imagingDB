@@ -101,16 +101,22 @@ def download_data(args):
         )
         # Write global metadata to dest folder
         global_meta_filename = os.path.join(
-            dest_folder + "global_metadata.json")
+            dest_folder,
+            "global_metadata.json",
+        )
         json_validator.write_json_file(
             meta_dict=global_meta,
             json_filename=global_meta_filename,
         )
         # Write info for each frame to dest folder
         local_meta_filename = os.path.join(
-            dest_folder + "frames_info.json")
+            dest_folder,
+            "frames_info.json",
+        )
         frames_info.to_csv(local_meta_filename, sep=",")
-
+        # Extract folder and file names if we want to download
+        folder_name = global_meta["folder_name"]
+        file_names = frames_info["file_name"]
 
     if args.download:
         data_loader = s3_storage.DataStorage(

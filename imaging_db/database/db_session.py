@@ -296,15 +296,16 @@ def _get_meta_from_frames(frames):
     :return dataframe frames_info: Metadata for each frame
     """
     # Collect global metadata that can be used to instantiate im_stack
-    global_meta = []
-    global_meta["folder_name"] = frames[0].frames_global.folder_name
-    global_meta["nbr_frames"] = frames[0].frames_global.nbr_frames
-    global_meta["im_width"] = frames[0].frames_global.im_width
-    global_meta["im_height"] = frames[0].frames_global.im_height
-    global_meta["im_depth"] = frames[0].frames_global.im_depth
-    global_meta["nbr_channels"] = frames[0].frames_global.nbr_channels
-    global_meta["im_colors"] = frames[0].frames_global.im_colors
-    global_meta["bit_depth"] = frames[0].frames_global.bit_depth
+    global_meta = {
+        "folder_name": frames[0].frames_global.folder_name,
+        "nbr_frames": frames[0].frames_global.nbr_frames,
+        "im_width": frames[0].frames_global.im_width,
+        "im_height": frames[0].frames_global.im_height,
+        "im_depth": frames[0].frames_global.im_depth,
+        "nbr_channels": frames[0].frames_global.nbr_channels,
+        "im_colors": frames[0].frames_global.im_colors,
+        "bit_depth": frames[0].frames_global.bit_depth,
+    }
 
     # Metadata that will be returned from the DB for each frame
     col_names = ["channel_idx", "slice_idx", "frame_idx", "file_name"]
@@ -319,6 +320,8 @@ def _get_meta_from_frames(frames):
             f.frame_idx,
             f.file_name,
         ]
+    # TODO: Add number of timepoints to global meta at upload
+    global_meta["nbr_timepoints"] = len(np.unique(frames_info["frame_idx"]))
     return global_meta, frames_info
 
 
@@ -349,7 +352,7 @@ def get_frames_info(credentials_filename, dataset_serial):
             .join(DataSet) \
             .filter(DataSet.dataset_serial == dataset.dataset_serial) \
             .all()
-
+        # Get global and local metadata
         global_meta, frames_info = _get_meta_from_frames(frames)
         return global_meta, frames_info
 
