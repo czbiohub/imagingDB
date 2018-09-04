@@ -288,7 +288,7 @@ def get_filenames(credentials_filename, dataset_serial):
 
 def _get_meta_from_frames(frames):
     """
-    Eextract global meta as well as info for each frame given
+    Extract global meta as well as info for each frame given
     a frames query.
 
     :param list of Frames frames: Frames obtained from dataset query
