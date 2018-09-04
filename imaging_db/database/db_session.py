@@ -1,5 +1,7 @@
 from contextlib import contextmanager
 import numpy as np
+import os
+import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -249,6 +251,8 @@ def get_filenames(credentials_filename, dataset_serial):
 
     :param str credentials_filename: JSON file containing DB credentials
     :param str dataset_serial: Unique identifier for file
+    :return str folder_name: Folder name containing file(s) on S3
+    :return list of strs file_names: List of file names for given dataset
     """
     # Create session
     with session_scope(credentials_filename) as session:
@@ -282,7 +286,74 @@ def get_filenames(credentials_filename, dataset_serial):
             return folder_name, file_names
 
 
+def _get_meta_from_frames(frames):
+    """
+    Extract global meta as well as info for each frame given
+    a frames query.
+
+    :param list of Frames frames: Frames obtained from dataset query
+    :return dict global_meta: Global metadata for dataset
+    :return dataframe frames_info: Metadata for each frame
+    """
+    # Collect global metadata that can be used to instantiate im_stack
+    global_meta = {
+        "folder_name": frames[0].frames_global.folder_name,
+        "nbr_frames": frames[0].frames_global.nbr_frames,
+        "im_width": frames[0].frames_global.im_width,
+        "im_height": frames[0].frames_global.im_height,
+        "im_depth": frames[0].frames_global.im_depth,
+        "nbr_channels": frames[0].frames_global.nbr_channels,
+        "im_colors": frames[0].frames_global.im_colors,
+        "bit_depth": frames[0].frames_global.bit_depth,
+    }
+
+    # Metadata that will be returned from the DB for each frame
+    col_names = ["channel_idx", "slice_idx", "frame_idx", "file_name"]
+    # Get metadata and oath for each frame
+    frames_info = pd.DataFrame(
+        index=range(global_meta["nbr_frames"]),
+        columns=col_names,
+    )
+    for i, f in enumerate(frames):
+        frames_info.loc[i] = [
+            f.channel_idx,
+            f.slice_idx,
+            f.frame_idx,
+            f.file_name,
+        ]
+    # TODO: Add number of timepoints to global meta at upload
+    global_meta["nbr_timepoints"] = len(np.unique(frames_info["frame_idx"]))
+    return global_meta, frames_info
 
 
+def get_frames_info(credentials_filename, dataset_serial):
+    """
+    Get information for all frames in dataset associated with unique
+    project identifier.
+    TODO: Add support for only retrieving select channels
+    (or whatever data subsets users are typically interested in)
 
+    :param str credentials_filename: JSON file containing DB credentials
+    :param str dataset_serial: Unique identifier for file
+    :return dict global_meta: Global metadata for dataset
+    :return dataframe frames_info: Metadata for each frame
+    """
+    # Create session
+    with session_scope(credentials_filename) as session:
+        # Check if ID already exist
+        dataset = session.query(DataSet) \
+               .filter(DataSet.dataset_serial == dataset_serial).one()
+
+        assert dataset.frames is True,\
+            "This dataset has not been split into frames"
+
+        # Get frames in datset
+        frames = session.query(Frames) \
+            .join(FramesGlobal) \
+            .join(DataSet) \
+            .filter(DataSet.dataset_serial == dataset.dataset_serial) \
+            .all()
+        # Get global and local metadata
+        global_meta, frames_info = _get_meta_from_frames(frames)
+        return global_meta, frames_info
 

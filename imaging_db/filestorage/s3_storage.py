@@ -84,9 +84,9 @@ class DataStorage:
             key,
         )
 
-    def fetch_im(self, file_name):
+    def get_im(self, file_name):
         """
-        Given file name, fetch image
+        Given file name, fetch 2D image (frame)
 
         :param str file_name: slice file name
         :return np.array im: 2D image
@@ -98,47 +98,65 @@ class DataStorage:
             Key=key,
         )['Body'].read()
         # Construct an array from the bytes and decode image
-        im = im_utils.deserialize_im(byte_str)
-        return im
+        return im_utils.deserialize_im(byte_str)
 
-    def fetch_im_stack(self, file_names, stack_shape, bit_depth, verbose=False):
+    def get_stack(self, file_names, stack_shape, bit_depth, verbose=False):
         """
         Given file names, fetch images and return image stack
 
-        :param list of str file_names: slice file names
-        :param tuple stack_shape: shape of image stack
-        :return np.array im_stack: stack of 2D images
+        :param list of str file_names: Frame file names
+        :param tuple stack_shape: Shape of image stack
+        :param dtype bit_depth: Bit depth
+        :return np.array im_stack: Stack of 2D images
         """
         im_stack = np.zeros(stack_shape, dtype=bit_depth)
 
         if verbose:
             for im_nbr in tqdm(range(len(file_names))):
-                im = self.get_frame(file_names[im_nbr])
+                im = self.get_im(file_names[im_nbr])
                 im_stack[..., im_nbr] = np.atleast_3d(im)
-
         else:
             for im_nbr in range(len(file_names)):
-                im = self.get_frame(file_names[im_nbr])
+                im = self.get_im(file_names[im_nbr])
                 im_stack[..., im_nbr] = np.atleast_3d(im)
-
         return im_stack
 
-    def get_frame(self, file_name):
+    def get_stack_from_meta(self, global_meta, frames_info):
         """
-        Download a single frame from S3 to a numpy array
+        Given global metadata, instantiate an image stack. The default order
+        of frames is:
+         X Y [gray/RGB] Z C T
+         Image width, height, colors (1 or 3), the z depth, channel, timepoint
 
-        :param str file_name: name of the file to be downloaded
+        Retrieve all frames from local metadata and return image stack.
+        Ones in stack shape indicates singleton dimensions. They are kept
+        so that you can know which dimention is which. You can remove
+        singletons by using np.squeeze
+        TODO: Add option to customize image order
+
+        :param dict global_meta: Global metadata for dataset
+        :param dataframe frames_info: Local metadata and paths for each file
+        :return np.array im_stack: Stack of 2D images
         """
+        stack_shape = (
+            global_meta["im_width"],
+            global_meta["im_height"],
+            global_meta["im_colors"],
+            global_meta["im_depth"],
+            global_meta["nbr_channels"],
+            global_meta["nbr_timepoints"],
+        )
+        im_stack = np.zeros(stack_shape, global_meta["bit_depth"])
 
-        key = "/".join([self.folder_name, file_name])
-        byte_str = self.s3_client.get_object(
-            Bucket=self.bucket_name,
-            Key=key,
-        )['Body'].read()
-        # Construct an array from the bytes and decode image
-        frame = im_utils.deserialize_im(byte_str)
-
-        return frame
+        # Fill the image stack given dimensions
+        for im_nbr, row in frames_info.iterrows():
+            im = self.get_im(row.file_name)
+            # X, Y, [gray/RGB], Z=slice_idx, C=channel_idx, T=frame_idx
+            im_stack[:, :, :,
+                     row.slice_idx,
+                     row.channel_idx,
+                     row.frame_idx] = np.atleast_3d(im)
+        return im_stack
 
     def download_file(self, file_name, dest_path):
         """
