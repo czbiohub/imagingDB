@@ -146,7 +146,7 @@ class DataStorage:
             global_meta["im_width"],
             global_meta["im_height"],
             global_meta["im_colors"],
-            global_meta["stack_depth"],
+            global_meta["nbr_slices"],
             global_meta["nbr_channels"],
             global_meta["nbr_timepoints"],
             global_meta["nbr_positions"],

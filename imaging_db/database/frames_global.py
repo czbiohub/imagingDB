@@ -17,7 +17,7 @@ class FramesGlobal(Base):
     nbr_frames = Column(Integer)
     im_width = Column(Integer)
     im_height = Column(Integer)
-    stack_depth = Column(Integer)
+    nbr_slices = Column(Integer)
     nbr_channels = Column(Integer)
     im_colors = Column(Integer)
     nbr_timepoints = Column(Integer)
@@ -40,7 +40,7 @@ class FramesGlobal(Base):
                  nbr_frames,
                  im_width,
                  im_height,
-                 stack_depth,
+                 nbr_slices,
                  nbr_channels,
                  im_colors,
                  nbr_timepoints,
@@ -52,7 +52,7 @@ class FramesGlobal(Base):
         self.nbr_frames = nbr_frames
         self.im_width = im_width
         self.im_height = im_height
-        self.stack_depth = stack_depth
+        self.nbr_slices = nbr_slices
         self.nbr_channels = nbr_channels
         self.im_colors = im_colors
         self.nbr_timepoints = nbr_timepoints
