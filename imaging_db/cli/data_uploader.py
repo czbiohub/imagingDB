@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import argparse
+import numpy as np
 import os
 import pandas as pd
 
@@ -80,6 +81,11 @@ def upload_data_and_update_db(args):
         if args.override == 0:
             db_session.assert_unique_id(args.login, dataset_serial)
 
+        # Make sure microscope isn't a NaN
+        microscope = row.microscope
+        if np.isnan(microscope):
+            microscope = None
+
         # Make sure image file exists
         file_name = row.file_name
         assert os.path.isfile(file_name), \
@@ -128,7 +134,7 @@ def upload_data_and_update_db(args):
                     frames_json_meta=frames_json,
                     global_meta=global_meta,
                     global_json_meta=global_json,
-                    microscope=row.microscope,
+                    microscope=microscope,
                     parent_dataset=row.parent_dataset_id,
                 )
                 print("Frame info for {} inserted in DB"
@@ -161,7 +167,7 @@ def upload_data_and_update_db(args):
                     description=row.description,
                     folder_name=folder_name,
                     global_json_meta=global_json,
-                    microscope=row.microscope,
+                    microscope=microscope,
                     parent_dataset=row.parent_dataset_id,
                 )
                 print("File info for {} inserted in DB".format(dataset_serial))
