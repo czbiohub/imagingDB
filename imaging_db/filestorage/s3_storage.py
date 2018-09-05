@@ -137,26 +137,42 @@ class DataStorage:
         :param dict global_meta: Global metadata for dataset
         :param dataframe frames_meta: Local metadata and paths for each file
         :return np.array im_stack: Stack of 2D images
+        :return str dim_str: String indicating order of stack dimensions
+            Possible values: XYGZCTP
+            X=im_width, Y=im_height, G=[gray/RGB] (1 or 3),
+            Z=slice_idx, C=channel_idx, T=time_idx, P=pos_idx
         """
         stack_shape = (
             global_meta["im_width"],
             global_meta["im_height"],
             global_meta["im_colors"],
-            global_meta["im_depth"],
+            global_meta["stack_depth"],
             global_meta["nbr_channels"],
             global_meta["nbr_timepoints"],
+            global_meta["nbr_positions"],
         )
         im_stack = np.zeros(stack_shape, global_meta["bit_depth"])
+        # Metadata don't have to be indexed starting at 0 or continuous
+        unique_slice = np.unique(frames_meta["slice_idx"])
+        unique_channel = np.unique(frames_meta["channel_idx"])
+        unique_time = np.unique(frames_meta["time_idx"])
+        unique_pos = np.unique(frames_meta["pos_idx"])
 
         # Fill the image stack given dimensions
         for im_nbr, row in frames_meta.iterrows():
             im = self.get_im(row.file_name)
-            # X, Y, [gray/RGB], Z=slice_idx, C=channel_idx, T=time_idx
             im_stack[:, :, :,
-                     row.slice_idx,
-                     row.channel_idx,
-                     row.time_idx] = np.atleast_3d(im)
-        return im_stack
+                     np.where(unique_slice == row.slice_idx)[0][0],
+                     np.where(unique_channel == row.channel_idx)[0][0],
+                     np.where(unique_time == row.time_idx)[0][0],
+                     np.where(unique_pos == row.pos_idx)[0][0],
+            ] = np.atleast_3d(im)
+        # Return squeezed stack and string that indicates dimension order
+        dim_order = "XYGZCTP"
+        single_dims = np.where(np.asarray(stack_shape) == 1)[0]
+        dim_str = ''.join(x for x in dim_order
+                          if dim_order.index(x) not in single_dims)
+        return np.squeeze(im_stack), dim_str
 
     def download_file(self, file_name, dest_path):
         """

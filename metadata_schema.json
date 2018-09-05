@@ -13,6 +13,9 @@
         "FrameIndex": {
           "type": "integer"
         },
+        "PositionIndex": {
+          "type": "integer"
+        },
         "Exposure-ms": {
           "type": "number"
         }
@@ -20,7 +23,8 @@
       "required": [
         "ChannelIndex",
         "Slice",
-        "FrameIndex"
+        "FrameIndex",
+        "PositionIndex"
       ]
     }
   },

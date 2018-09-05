@@ -56,9 +56,9 @@ def validate_global_meta(global_meta):
             "stack_depth",
             "nbr_channels",
             "im_colors",
-            "bit_depth",
             "nbr_timepoints",
-            "nbr_positions"]
+            "nbr_positions",
+            "bit_depth"]
 
     keys_valid = np.zeros(len(keys), dtype='bool')
     for idx, key in enumerate(keys):
@@ -181,7 +181,6 @@ def read_ome_tiff(file_name,
         "nbr_positions": len(np.unique(frames_meta["pos_idx"])),
     }
     validate_global_meta(global_meta)
-    print(global_meta)
 
     return im_stack, frames_meta, frames_json, global_meta, global_json
 

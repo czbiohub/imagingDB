@@ -22,7 +22,7 @@ class Frames(Base):
     channel_name = Column(String)
     file_name = Column(String)
     metadata_json = Column(JSONB)
-    image_id = Column(Integer, ForeignKey('frames_global.id'))
+    frames_global_id = Column(Integer, ForeignKey('frames_global.id'))
     frames_global = relationship("FramesGlobal", backref="frames")
 
     def __init__(self,

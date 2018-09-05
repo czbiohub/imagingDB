@@ -36,6 +36,7 @@ class FramesGlobal(Base):
     )
 
     def __init__(self,
+                 folder_name,
                  nbr_frames,
                  im_width,
                  im_height,
@@ -45,9 +46,9 @@ class FramesGlobal(Base):
                  nbr_timepoints,
                  nbr_positions,
                  bit_depth,
-                 folder_name,
                  metadata_json,
                  data_set):
+        self.folder_name = folder_name
         self.nbr_frames = nbr_frames
         self.im_width = im_width
         self.im_height = im_height
@@ -57,6 +58,5 @@ class FramesGlobal(Base):
         self.nbr_timepoints = nbr_timepoints
         self.nbr_positions = nbr_positions
         self.bit_depth = bit_depth
-        self.folder_name = folder_name
         self.metadata_json = metadata_json
         self.data_set = data_set

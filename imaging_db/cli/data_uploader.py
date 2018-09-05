@@ -81,10 +81,10 @@ def upload_data_and_update_db(args):
         if args.override == 0:
             db_session.assert_unique_id(args.login, dataset_serial)
 
-        # Make sure microscope isn't a NaN
+        # Make sure microscope isn't a float (nan)
         microscope = row.microscope
-        if np.isnan(microscope):
-            microscope = None
+        if isinstance(microscope, float):
+            microscope = "None"
 
         # Make sure image file exists
         file_name = row.file_name

@@ -168,14 +168,17 @@ def insert_frames(credentials_filename,
         )
         # Add global frame information
         new_frames_global = FramesGlobal(
+            folder_name=global_meta["folder_name"],
             nbr_frames=global_meta["nbr_frames"],
             im_width=global_meta["im_width"],
             im_height=global_meta["im_height"],
             stack_depth=global_meta["stack_depth"],
             nbr_channels=global_meta["nbr_channels"],
+            nbr_timepoints=global_meta["nbr_timepoints"],
+            nbr_positions=global_meta["nbr_positions"],
             im_colors=global_meta["im_colors"],
             bit_depth=global_meta["bit_depth"],
-            folder_name = global_meta["folder_name"],
+
             metadata_json=global_json_meta,
             data_set=new_dataset,
         )
@@ -304,7 +307,7 @@ def _get_meta_from_frames(frames):
         "im_colors": frames[0].frames_global.im_colors,
         "bit_depth": frames[0].frames_global.bit_depth,
         "nbr_timepoints": frames[0].frames_global.nbr_timepoints,
-        "nbr_positions": frames[0].frames_global.positions,
+        "nbr_positions": frames[0].frames_global.nbr_positions,
     }
     file_splitter.validate_global_meta(global_meta)
 
@@ -317,6 +320,7 @@ def _get_meta_from_frames(frames):
             f.channel_idx,
             f.slice_idx,
             f.time_idx,
+            f.channel_name,
             f.file_name,
             f.pos_idx,
         ]
