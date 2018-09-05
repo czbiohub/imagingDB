@@ -95,7 +95,7 @@ def download_data(args):
         )
     else:
         # Dataset should be split into frames, get metadata
-        global_meta, frames_info = db_session.get_frames_info(
+        global_meta, frames_meta = db_session.get_frames_meta(
             credentials_filename=args.login,
             dataset_serial=dataset_serial,
         )
@@ -111,12 +111,12 @@ def download_data(args):
         # Write info for each frame to dest folder
         local_meta_filename = os.path.join(
             dest_folder,
-            "frames_info.csv",
+            "frames_meta.csv",
         )
-        frames_info.to_csv(local_meta_filename, sep=",")
+        frames_meta.to_csv(local_meta_filename, sep=",")
         # Extract folder and file names if we want to download
         folder_name = global_meta["folder_name"]
-        file_names = frames_info["file_name"]
+        file_names = frames_meta["file_name"]
 
     if args.download:
         data_loader = s3_storage.DataStorage(

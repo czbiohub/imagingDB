@@ -100,6 +100,7 @@ def upload_data_and_update_db(args):
                 file_splitter.read_ome_tiff(
                     file_name=file_name,
                     schema_filename=meta_schema,
+                    folder_name=folder_name,
                     file_format=FRAME_FILE_FORMAT)
             try:
                 data_uploader = s3_storage.DataStorage(
@@ -126,7 +127,6 @@ def upload_data_and_update_db(args):
                     frames_meta=frames_meta,
                     frames_json_meta=frames_json,
                     global_meta=global_meta,
-                    folder_name=folder_name,
                     global_json_meta=global_json,
                     microscope=row.microscope,
                     parent_dataset=row.parent_dataset_id,

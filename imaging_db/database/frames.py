@@ -17,7 +17,8 @@ class Frames(Base):
     id = Column(Integer, primary_key=True)
     channel_idx = Column(Integer)
     slice_idx = Column(Integer)
-    frame_idx = Column(Integer)
+    time_idx = Column(Integer)
+    pos_idx = Column(Integer)
     channel_name = Column(String)
     file_name = Column(String)
     metadata_json = Column(JSONB)
@@ -27,14 +28,16 @@ class Frames(Base):
     def __init__(self,
                  channel_idx,
                  slice_idx,
-                 frame_idx,
+                 time_idx,
+                 pos_idx,
                  channel_name,
                  file_name,
                  metadata_json,
                  frames_global):
         self.channel_idx = channel_idx
         self.slice_idx = slice_idx
-        self.frame_idx = frame_idx
+        self.time_idx = time_idx
+        self.pos_idx = pos_idx
         self.channel_name = channel_name
         self.file_name = file_name
         self.metadata_json = metadata_json

@@ -121,7 +121,7 @@ class DataStorage:
                 im_stack[..., im_nbr] = np.atleast_3d(im)
         return im_stack
 
-    def get_stack_from_meta(self, global_meta, frames_info):
+    def get_stack_from_meta(self, global_meta, frames_meta):
         """
         Given global metadata, instantiate an image stack. The default order
         of frames is:
@@ -135,7 +135,7 @@ class DataStorage:
         TODO: Add option to customize image order
 
         :param dict global_meta: Global metadata for dataset
-        :param dataframe frames_info: Local metadata and paths for each file
+        :param dataframe frames_meta: Local metadata and paths for each file
         :return np.array im_stack: Stack of 2D images
         """
         stack_shape = (
@@ -149,13 +149,13 @@ class DataStorage:
         im_stack = np.zeros(stack_shape, global_meta["bit_depth"])
 
         # Fill the image stack given dimensions
-        for im_nbr, row in frames_info.iterrows():
+        for im_nbr, row in frames_meta.iterrows():
             im = self.get_im(row.file_name)
-            # X, Y, [gray/RGB], Z=slice_idx, C=channel_idx, T=frame_idx
+            # X, Y, [gray/RGB], Z=slice_idx, C=channel_idx, T=time_idx
             im_stack[:, :, :,
                      row.slice_idx,
                      row.channel_idx,
-                     row.frame_idx] = np.atleast_3d(im)
+                     row.time_idx] = np.atleast_3d(im)
         return im_stack
 
     def download_file(self, file_name, dest_path):
