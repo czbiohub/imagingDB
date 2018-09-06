@@ -83,7 +83,7 @@ def upload_data_and_update_db(args):
 
         # Make sure microscope isn't a float (nan)
         microscope = row.microscope
-        if isinstance(microscope, float):
+        if not isinstance(microscope, str):
             microscope = "None"
 
         # Make sure image file exists

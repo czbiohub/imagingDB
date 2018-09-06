@@ -34,7 +34,7 @@ def make_dataframe(nbr_frames, col_names=DF_NAMES):
     :return dataframe frames_meta: Empty dataframe with given
         indices and column names
     """
-    # Get metadata and oath for each frame
+    # Get metadata and path for each frame
     frames_meta = pd.DataFrame(
         index=range(nbr_frames),
         columns=col_names,
@@ -65,8 +65,8 @@ def validate_global_meta(global_meta):
         key_valid = (key in global_meta) and \
                         (global_meta[key] is not None)
         keys_valid[idx] = key_valid
-    if np.all(keys_valid) is False:
-        raise AssertionError("Not all required metadata keys are present")
+    assert np.all(keys_valid) is True,\
+        "Not all required metadata keys are present"
 
 
 def _get_imname(meta_i, file_format, int2str_len):

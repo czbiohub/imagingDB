@@ -1,6 +1,6 @@
 
 
-def validate_id(id_str):
+def validate_id(id_str, check_letters=False):
     """
     Assert that the ID follows the naming convention
     <ID>-YYYY-MM-DD-HH-MM-SS-<SSSS>.
@@ -10,13 +10,16 @@ def validate_id(id_str):
     SSSS is a 4 digit serial number
 
     :param str id_str: ID string
+    :param bool check_letters: Check the initial letters in the dataset
+        serial (these may vary)
     """
     substrs = id_str.split("-")
     assert len(substrs) == 8, \
         "ID should have format <ID>-YYYY-MM-DD-HH-MM-SS-<SSSS>"
-    assert substrs[0] in {"ISP", "ML"}, \
-        "Project ID ({}) doesn't match existing IDs (ISP, ML)" \
-        .format(substrs[0])
+    if check_letters:
+        assert substrs[0] in {"ISP", "ML"}, \
+            "Project ID ({}) doesn't match existing IDs (ISP, ML)" \
+            .format(substrs[0])
     assert len(substrs[1]) == 4, \
         "Year should consist of 4 letters, not {}".format(substrs[1])
     units = ["Month", "Day", "Hour", "Minute", "Second"]
