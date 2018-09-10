@@ -50,7 +50,7 @@ def test_invalid_json():
     }
     json_validator.validate_schema(
         invalid_json,
-        schema_name="CREDENTIALS_SCHEMA")
+        schema="CREDENTIALS_SCHEMA")
 
 
 def test_valid_micrometa():
@@ -63,7 +63,7 @@ def test_valid_micrometa():
     }
     json_validator.validate_schema(
         micrometa_json,
-        schema_name="MICROMETA_SCHEMA")
+        schema="MICROMETA_SCHEMA")
 
 
 @nose.tools.raises(jsonschema.exceptions.ValidationError)
@@ -74,7 +74,7 @@ def test_invalid_micrometa():
     }
     json_validator.validate_schema(
         micrometa_json,
-        schema_name="MICROMETA_SCHEMA")
+        schema="MICROMETA_SCHEMA")
 
 
 @nose.tools.raises(KeyError)
@@ -85,7 +85,7 @@ def test_not_a_schema():
     }
     json_validator.validate_schema(
         json_obj,
-        schema_name="NOTA_SCHEMA")
+        schema="NOTA_SCHEMA")
 
 
 @nose.tools.raises(FileNotFoundError)

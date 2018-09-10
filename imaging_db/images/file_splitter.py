@@ -65,7 +65,7 @@ def validate_global_meta(global_meta):
         key_valid = (key in global_meta) and \
                         (global_meta[key] is not None)
         keys_valid[idx] = key_valid
-    assert bool(np.all(keys_valid)) is True,\
+    assert np.all(keys_valid),\
         "Not all required metadata keys are present"
 
 

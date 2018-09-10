@@ -33,7 +33,7 @@ def validate_schema(json_object, schema):
     """
     Validate JSON object against predefined schema.
 
-    :param json json_object:
+    :param json json_object: JSON object
     :param str/dict schema: predefined schema or
         name of schema defined in this file
         current options are:
