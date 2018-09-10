@@ -1,7 +1,5 @@
 from contextlib import contextmanager
 import numpy as np
-import os
-import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -10,6 +8,7 @@ from imaging_db.database.file_global import FileGlobal
 from imaging_db.database.frames_global import FramesGlobal
 from imaging_db.database.frames import Frames
 from imaging_db.database.dataset import DataSet
+import imaging_db.images.file_splitter as file_splitter
 import imaging_db.metadata.json_validator as json_validator
 
 
@@ -130,7 +129,6 @@ def _get_parent(session, parent_dataset, dataset_serial):
 def insert_frames(credentials_filename,
                   dataset_serial,
                   description,
-                  folder_name,
                   frames_meta,
                   frames_json_meta,
                   global_meta,
@@ -143,7 +141,6 @@ def insert_frames(credentials_filename,
     :param str credentials_filename: JSON file containing DB credentials
     :param str dataset_serial: Unique identifier for file
     :param str description: Short description of file
-    :param str folder_name: Folder in S3 bucket where data is stored
     :param dataframe frames_meta: Dataframe containing mandatory fields for
         each frame
     :param json frames_json_meta: json object with arbitrary local metadata
@@ -171,14 +168,17 @@ def insert_frames(credentials_filename,
         )
         # Add global frame information
         new_frames_global = FramesGlobal(
+            folder_name=global_meta["folder_name"],
             nbr_frames=global_meta["nbr_frames"],
             im_width=global_meta["im_width"],
             im_height=global_meta["im_height"],
-            im_depth=global_meta["im_depth"],
+            nbr_slices=global_meta["nbr_slices"],
             nbr_channels=global_meta["nbr_channels"],
+            nbr_timepoints=global_meta["nbr_timepoints"],
+            nbr_positions=global_meta["nbr_positions"],
             im_colors=global_meta["im_colors"],
             bit_depth=global_meta["bit_depth"],
-            folder_name = folder_name,
+
             metadata_json=global_json_meta,
             data_set=new_dataset,
         )
@@ -187,7 +187,8 @@ def insert_frames(credentials_filename,
             new_frame = Frames(
                 channel_idx=frames_meta.loc[i, "channel_idx"],
                 slice_idx=frames_meta.loc[i, "slice_idx"],
-                frame_idx=frames_meta.loc[i, "frame_idx"],
+                time_idx=frames_meta.loc[i, "time_idx"],
+                pos_idx=frames_meta.loc[i, "pos_idx"],
                 channel_name=frames_meta.loc[i, "channel_name"],
                 file_name=frames_meta.loc[i, "file_name"],
                 metadata_json=frames_json_meta[i],
@@ -293,7 +294,7 @@ def _get_meta_from_frames(frames):
 
     :param list of Frames frames: Frames obtained from dataset query
     :return dict global_meta: Global metadata for dataset
-    :return dataframe frames_info: Metadata for each frame
+    :return dataframe frames_meta: Metadata for each frame
     """
     # Collect global metadata that can be used to instantiate im_stack
     global_meta = {
@@ -301,32 +302,32 @@ def _get_meta_from_frames(frames):
         "nbr_frames": frames[0].frames_global.nbr_frames,
         "im_width": frames[0].frames_global.im_width,
         "im_height": frames[0].frames_global.im_height,
-        "im_depth": frames[0].frames_global.im_depth,
+        "nbr_slices": frames[0].frames_global.nbr_slices,
         "nbr_channels": frames[0].frames_global.nbr_channels,
         "im_colors": frames[0].frames_global.im_colors,
+        "nbr_timepoints": frames[0].frames_global.nbr_timepoints,
+        "nbr_positions": frames[0].frames_global.nbr_positions,
         "bit_depth": frames[0].frames_global.bit_depth,
     }
+    file_splitter.validate_global_meta(global_meta)
 
     # Metadata that will be returned from the DB for each frame
-    col_names = ["channel_idx", "slice_idx", "frame_idx", "file_name"]
-    # Get metadata and oath for each frame
-    frames_info = pd.DataFrame(
-        index=range(global_meta["nbr_frames"]),
-        columns=col_names,
+    frames_meta = file_splitter.make_dataframe(
+        nbr_frames=global_meta["nbr_frames"],
     )
     for i, f in enumerate(frames):
-        frames_info.loc[i] = [
+        frames_meta.loc[i] = [
             f.channel_idx,
             f.slice_idx,
-            f.frame_idx,
+            f.time_idx,
+            f.channel_name,
             f.file_name,
+            f.pos_idx,
         ]
-    # TODO: Add number of timepoints to global meta at upload
-    global_meta["nbr_timepoints"] = len(np.unique(frames_info["frame_idx"]))
-    return global_meta, frames_info
+    return global_meta, frames_meta
 
 
-def get_frames_info(credentials_filename, dataset_serial):
+def get_frames_meta(credentials_filename, dataset_serial):
     """
     Get information for all frames in dataset associated with unique
     project identifier.
@@ -336,7 +337,7 @@ def get_frames_info(credentials_filename, dataset_serial):
     :param str credentials_filename: JSON file containing DB credentials
     :param str dataset_serial: Unique identifier for file
     :return dict global_meta: Global metadata for dataset
-    :return dataframe frames_info: Metadata for each frame
+    :return dataframe frames_meta: Metadata for each frame
     """
     # Create session
     with session_scope(credentials_filename) as session:
@@ -354,6 +355,6 @@ def get_frames_info(credentials_filename, dataset_serial):
             .filter(DataSet.dataset_serial == dataset.dataset_serial) \
             .all()
         # Get global and local metadata
-        global_meta, frames_info = _get_meta_from_frames(frames)
-        return global_meta, frames_info
+        global_meta, frames_meta = _get_meta_from_frames(frames)
+        return global_meta, frames_meta
 
