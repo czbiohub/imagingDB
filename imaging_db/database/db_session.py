@@ -305,9 +305,9 @@ def _get_meta_from_frames(frames):
         "nbr_slices": frames[0].frames_global.nbr_slices,
         "nbr_channels": frames[0].frames_global.nbr_channels,
         "im_colors": frames[0].frames_global.im_colors,
-        "bit_depth": frames[0].frames_global.bit_depth,
         "nbr_timepoints": frames[0].frames_global.nbr_timepoints,
         "nbr_positions": frames[0].frames_global.nbr_positions,
+        "bit_depth": frames[0].frames_global.bit_depth,
     }
     file_splitter.validate_global_meta(global_meta)
 

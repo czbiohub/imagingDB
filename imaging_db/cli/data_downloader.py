@@ -24,7 +24,8 @@ def parse_args():
     parser.add_argument(
         '--dest',
         type=str,
-        help="Destination folder",
+        help="Main destination folder, in which a subfolder named args.id "
+             "\will be created",
     )
     parser.add_argument(
         '--metadata',
@@ -81,9 +82,15 @@ def download_data(args):
     except AssertionError as e:
         print("Invalid ID:", e)
 
-    # Create output directory if it doesn't exist already
-    dest_folder = args.dest
-    os.makedirs(dest_folder, exist_ok=True)
+    # Create output directory as a subdirectory in args.dest named
+    # dataset_serial. It stops if the subdirectory already exists to avoid
+    # the risk of overwriting existing data
+    dest_folder = os.path.join(args.dest, dataset_serial)
+    try:
+        os.makedirs(dest_folder, exist_ok=False)
+    except FileExistsError as e:
+        print("Folder {} already exists".format(dest_folder))
+        return
 
     if args.metadata == False:
         # Just download file(s)
