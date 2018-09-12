@@ -92,20 +92,24 @@ def download_data(args):
         print("Folder {} already exists".format(dest_folder))
         return
 
+    # Instantiate database class
+    try:
+        db_inst = db_session.DatabaseOperations(
+            credentials_filename=args.login,
+            dataset_serial=dataset_serial,
+        )
+    except Exception as e:
+        print(e)
+        raise
+
     if args.metadata == False:
         # Just download file(s)
         assert args.download is True,\
             "You set metadata *and* download to False. You get nothing."
-        folder_name, file_names = db_session.get_filenames(
-            credentials_filename=args.login,
-            dataset_serial=dataset_serial,
-        )
+        folder_name, file_names = db_inst.get_filenames()
     else:
         # Dataset should be split into frames, get metadata
-        global_meta, frames_meta = db_session.get_frames_meta(
-            credentials_filename=args.login,
-            dataset_serial=dataset_serial,
-        )
+        global_meta, frames_meta = db_inst.get_frames_meta()
         # Write global metadata to dest folder
         global_meta_filename = os.path.join(
             dest_folder,
