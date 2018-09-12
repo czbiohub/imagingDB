@@ -102,7 +102,7 @@ def download_data(args):
         print(e)
         raise
 
-    if args.metadata == False:
+    if args.metadata is False:
         # Just download file(s)
         assert args.download is True,\
             "You set metadata *and* download to False. You get nothing."

@@ -67,7 +67,7 @@ def upload_data_and_update_db(args):
     files_data = pd.read_csv(args.csv)
 
     # Upload all files
-    for im_nbr, row in files_data.iterrows():
+    for file_nbr, row in files_data.iterrows():
         # Assert that ID is correctly formatted
         dataset_serial = row.dataset_id
         try:
@@ -101,35 +101,38 @@ def upload_data_and_update_db(args):
             print(e)
             raise
         # Make sure dataset is not already in database
-        if args.override:
+        if not args.override:
             db_inst.assert_unique_id()
 
         # Make sure microscope is a string
         microscope = row.microscope
         if not isinstance(microscope, str):
             microscope = None
-
+        print('serial', file_nbr, dataset_serial)
         if upload_type == "frames":
-            # Assert that an image + metadata extraction class has been
-            # implemented for this data type
-            assert args.frames_format in {"ome_tiff", "tiff_folder"}, \
-                "Only 'ome_tiff' and 'tiff_folder' are supported formats"\
-                "for reading frames, not {}".format(
-                    args.frames_format)
-            # Extract frames and metadata from input data path
-            if args.frames_format == "ome_tiff":
+            # Find get + metadata extraction class for this data type
+            if row.frames_format == "ome_tiff":
                 frames_inst = file_splitter.OmeTiffSplitter(
-                    file_name=row.file_name,
+                    data_path=row.file_name,
                     folder_name=folder_name,
                     file_format=FRAME_FILE_FORMAT,
                 )
                 frames_inst.get_frames_and_metadata(
                     schema_filename=row.meta_schema,
                 )
+            elif row.frames_format == "tif_folder":
+                frames_inst = file_splitter.TifFolderSplitter(
+                    data_path=row.file_name,
+                    folder_name=folder_name,
+                    file_format=FRAME_FILE_FORMAT,
+                )
+                frames_inst.get_frames_and_metadata()
             else:
+                "Only 'ome_tiff' and 'tif_folder' are supported formats"\
+                    "for reading frames, not {}".format(row.frames_format)
                 raise NotImplementedError
 
-            frames_meta = frames_inst.get_global_meta()
+            frames_meta = frames_inst.get_frames_meta()
             try:
                 # Upload stack frames to S3
                 data_uploader.upload_frames(
@@ -146,7 +149,7 @@ def upload_data_and_update_db(args):
                 db_inst.insert_frames(
                     description=row.description,
                     frames_meta=frames_meta,
-                    frames_json_meta=frames_inst.get_frames_meta(),
+                    frames_json_meta=frames_inst.get_frames_json(),
                     global_meta=frames_inst.get_global_meta(),
                     global_json_meta=frames_inst.get_global_json(),
                     microscope=microscope,

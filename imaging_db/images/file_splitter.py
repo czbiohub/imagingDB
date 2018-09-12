@@ -1,10 +1,13 @@
 from abc import ABCMeta, abstractmethod
+import glob
 import numpy as np
 import os
 import pandas as pd
 import pims
+import tifffile
 
 import imaging_db.metadata.json_validator as json_validator
+
 
 # TODO: Create a metaname translator
 # For all possible versions of a required variable, translate them
@@ -75,17 +78,18 @@ class FileSplitter(metaclass=ABCMeta):
     """Read different types of files and separate frame information"""
 
     def __init__(self,
-                 file_name,
+                 data_path,
                  folder_name,
                  file_format=".png",
                  int2str_len=3):
         """
-        :param str file_name: Full path to file
+        :param str data_path: Full path to file (ome.tiff) or directory name
+            (tif dir)
         :param str folder_name: Folder name on S3 where data will be stored
         :param str file_format: Image file format (preferred is png)
         :param int int2str_len: How many integers will be added to each index
         """
-        self.file_name = file_name
+        self.data_path = data_path
         self.folder_name = folder_name
         self.file_format = file_format
         self.int2str_len = int2str_len
@@ -141,17 +145,17 @@ class FileSplitter(metaclass=ABCMeta):
             "frames_json has no values yet"
         return self.frames_json
 
-    def _get_imname(self, meta_i):
+    def _get_imname(self, meta_row):
         """
         Generate image (frame) name given frame metadata and file format.
 
-        :param dict meta_i: Metadata for frame, must contain frame indices
+        :param dict meta_row: Metadata for frame, must contain frame indices
         :return str imname: Image file name
         """
-        return "im_c" + str(meta_i["channel_idx"]).zfill(self.int2str_len) + \
-            "_z" + str(meta_i["slice_idx"]).zfill(self.int2str_len) + \
-            "_t" + str(meta_i["time_idx"]).zfill(self.int2str_len) + \
-            "_p" + str(meta_i["pos_idx"]).zfill(self.int2str_len) + \
+        return "im_c" + str(meta_row["channel_idx"]).zfill(self.int2str_len) + \
+            "_z" + str(meta_row["slice_idx"]).zfill(self.int2str_len) + \
+            "_t" + str(meta_row["time_idx"]).zfill(self.int2str_len) + \
+            "_p" + str(meta_row["pos_idx"]).zfill(self.int2str_len) + \
             self.file_format
 
     def set_global_meta(self,
@@ -201,14 +205,14 @@ class OmeTiffSplitter(FileSplitter):
 
         :param str schema_filename: Gull path to metadata json schema file
         """
-        assert os.path.isfile(self.file_name), \
-            "File doesn't exist: {}".format(self.file_name)
-        assert self.file_name[-8:] == ".ome.tif", \
+        assert os.path.isfile(self.data_path), \
+            "File doesn't exist: {}".format(self.data_path)
+        assert self.data_path[-8:] == ".ome.tif", \
             "File extension must be .ome.tif, not {}".format(
-                self.file_name[-8:],
+                self.data_path[-8:],
             )
 
-        frames = pims.TiffStack(self.file_name)
+        frames = pims.TiffStack(self.data_path)
         # Get global metadata
         frame_shape = frames.frame_shape
         nbr_frames = len(frames)
@@ -218,18 +222,18 @@ class OmeTiffSplitter(FileSplitter):
             im_colors = frame_shape[2]
 
         # Create image stack with image bit depth 16 or 8
-        im_stack = np.empty((frame_shape[0],
-                             frame_shape[1],
-                             im_colors,
-                             nbr_frames),
-                            dtype=frames.pixel_type)
+        self.im_stack = np.empty((frame_shape[0],
+                                  frame_shape[1],
+                                  im_colors,
+                                  nbr_frames),
+                                 dtype=frames.pixel_type)
 
         # Get metadata schema
         meta_schema = json_validator.read_json_file(schema_filename)
         # IJMetadata only exists in first frame, so that goes into global json
         self.global_json, channel_names = json_validator.get_global_meta(
             frame=frames._tiff[0],
-            file_name=self.file_name,
+            file_name=self.data_path,
         )
 
         # Convert frames to numpy stack and collect metadata
@@ -241,7 +245,7 @@ class OmeTiffSplitter(FileSplitter):
         self.frames_json = []
         for i in range(nbr_frames):
             frame = frames._tiff[i]
-            im_stack[..., i] = np.atleast_3d(frame.asarray())
+            self.im_stack[..., i] = np.atleast_3d(frame.asarray())
             # Get dict with metadata from json schema
             json_i, meta_i = json_validator.get_metadata_from_tags(
                 frame=frame,
@@ -270,3 +274,102 @@ class OmeTiffSplitter(FileSplitter):
                 im_colors=im_colors,
                 pixel_type=frames.pixel_type
             )
+
+
+class TifFolderSplitter(FileSplitter):
+    """
+    Subclass for reading all tiff files in a folder
+    """
+
+    def _set_frame_meta_from_name(self, im_path, channel_names):
+        """
+        Assume file follows naming convention
+        img_channelname_t***_p***_z***.tif
+
+        Populates the frames_meta dict keys:
+        "channel_idx", "slice_idx", "time_idx", "channel_name",
+        "file_name", "pos_idx"
+        :param im_path: Path to frame
+        :return dict meta_row: Metadata for frame (one row in dataframe)
+        """
+        im_name = os.path.basename(im_path)[:-4]
+        str_split = im_name.split("_")[1:]
+        meta_row = dict.fromkeys(DF_NAMES)
+        for s in str_split:
+            # This is assuming no channel is named e.g. txxx
+            if s in channel_names:
+                meta_row["channel_name"] = s
+                # Index channels by names
+                meta_row["channel_idx"] = channel_names.index(s)
+            elif s.find("t") == 0 and len(s) == 4:
+                meta_row["time_idx"] = int(s[1:])
+            elif s.find("p") == 0 and len(s) == 4:
+                meta_row["pos_idx"] = int(s[1:])
+            elif s.find("z") == 0 and len(s) == 4:
+                meta_row["slice_idx"] = int(s[1:])
+        meta_row["file_name"] = self._get_imname(meta_row)
+        # Make sure meta row is properly filled
+        assert None not in meta_row.values(),\
+            "meta row has not been populated correctly"
+        return meta_row
+
+    def get_frames_and_metadata(self):
+        """
+        Global metadata dict is assumed to be in the same folder in a file
+        named metadata.txt
+        Frame metadata is extracted from each frame
+        File naming convention is assumed to be:
+        img_channelname_t***_p***_z***.tif
+        """
+        assert os.path.isdir(self.data_path), \
+            "Directory doesn't exist: {}".format(self.data_path)
+
+        frame_paths = glob.glob(os.path.join(self.data_path, "*.tif"))
+        nbr_frames = len(frame_paths)
+
+        self.global_json = json_validator.read_json_file(
+            os.path.join(self.data_path, "metadata.txt"),
+        )
+        meta_summary = self.global_json["Summary"]
+        channel_names = meta_summary["ChNames"]
+        pixel_type = meta_summary["PixelType"]
+        im_colors = 3
+        if pixel_type.find("GRAY") >= 0:
+            im_colors = 1
+        if meta_summary["BitDepth"] == 16:
+            bit_depth = np.uint16
+        elif meta_summary["BitDepth"] == 8:
+            bit_depth = np.uint8
+        else:
+            print("Bit depth must be 16 or 8, not {}".format(
+                meta_summary["BitDepth"]))
+            raise ValueError
+        # Create empty image stack and metadata dataframe and list
+        self.im_stack = np.empty((meta_summary["Width"],
+                                  meta_summary["Height"],
+                                  im_colors,
+                                  nbr_frames),
+                                 dtype=bit_depth)
+        self.frames_meta = make_dataframe(nbr_frames=nbr_frames)
+        self.frames_json = []
+        # Loop over all the frames to get data and metadata
+        for i, frame_path in enumerate(frame_paths):
+            imtif = tifffile.TiffFile(frame_path)
+            self.im_stack[..., i] = np.atleast_3d(imtif.asarray())
+            tiftags = imtif.pages[0].tags
+            # Get all frame specific metadata
+            dict_i = {}
+            for t in tiftags.keys():
+                dict_i[t] = tiftags[t].value
+            self.frames_json.append(dict_i)
+            self.frames_meta.loc[i] = self._set_frame_meta_from_name(
+                im_path=frame_path,
+                channel_names=channel_names,
+            )
+        # Set global metadata
+        self.set_global_meta(
+            nbr_frames=nbr_frames,
+            frame_shape=[meta_summary["Width"], meta_summary["Height"]],
+            im_colors=im_colors,
+            pixel_type=bit_depth,
+        )
