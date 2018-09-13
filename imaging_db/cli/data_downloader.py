@@ -104,7 +104,7 @@ def download_data(args):
 
     if args.metadata is False:
         # Just download file(s)
-        assert args.download is True,\
+        assert args.download,\
             "You set metadata *and* download to False. You get nothing."
         folder_name, file_names = db_inst.get_filenames()
     else:

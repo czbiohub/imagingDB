@@ -9,5 +9,6 @@ pandas
 pims
 psycopg2
 testfixtures
+tifffile
 sqlalchemy
 tqdm
