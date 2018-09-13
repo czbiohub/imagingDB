@@ -337,9 +337,9 @@ class TifFolderSplitter(FileSplitter):
         if pixel_type.find("GRAY") >= 0:
             im_colors = 1
         if meta_summary["BitDepth"] == 16:
-            bit_depth = np.uint16
+            bit_depth = "uint16"
         elif meta_summary["BitDepth"] == 8:
-            bit_depth = np.uint8
+            bit_depth = "uint8"
         else:
             print("Bit depth must be 16 or 8, not {}".format(
                 meta_summary["BitDepth"]))
