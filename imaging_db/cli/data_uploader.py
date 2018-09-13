@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
 import argparse
-import numpy as np
 import os
 import pandas as pd
 
@@ -22,13 +21,24 @@ def parse_args():
     :return: namespace containing the arguments passed.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--csv', type=str, help="Full path to csv file")
-    parser.add_argument('--login', type=str, help="Full path to file"
-                        "containing JSON with DB login credentials")
-    parser.add_argument('--override', type=int, default=0,
-                        help="In case of interruption, set to 1 and this"
-                             "t will continue upload where it stopped. Use"
-                             "with caution.")
+    parser.add_argument(
+        '--csv',
+        type=str,
+        help="Full path to csv file",
+    )
+    parser.add_argument(
+        '--login',
+        type=str,
+        help="Full path to file containing JSON with DB login credentials",
+    )
+    parser.add_argument(
+        '--override',
+        dest="override",
+        action="store_true",
+        help="In case of interruption, you can raise this flag and imageDB"
+             "will continue upload where it stopped. Use with caution.",
+    )
+    parser.set_defaults(override=False)
 
     return parser.parse_args()
 
@@ -38,7 +48,6 @@ def upload_data_and_update_db(args):
     Split, crop volumes and flatfield correct images in input and target
     directories. Writes output as npy files for faster reading while training.
     TODO: Add logging instead of printing
-    TODO: This ONLY supports ome.tif at the moment, fix when I have more data!
 
     :param list args:    parsed args containing
         str login: Full path to json file containing login credentials
@@ -58,7 +67,7 @@ def upload_data_and_update_db(args):
     files_data = pd.read_csv(args.csv)
 
     # Upload all files
-    for im_nbr, row in files_data.iterrows():
+    for file_nbr, row in files_data.iterrows():
         # Assert that ID is correctly formatted
         dataset_serial = row.dataset_id
         try:
@@ -71,69 +80,78 @@ def upload_data_and_update_db(args):
         assert upload_type in {"file", "frames"}, \
             "upload_type should be 'file' or 'frames', not {}".format(
                 upload_type)
+        # Instantiate S3 uploader
+        if upload_type == "frames":
+            folder_name = "/".join([FRAME_FOLDER_NAME, dataset_serial])
+        else:
+            folder_name = "/".join([FILE_FOLDER_NAME, dataset_serial])
+        data_uploader = s3_storage.DataStorage(
+            folder_name=folder_name,
+        )
+        if not args.override:
+            data_uploader.assert_unique_id()
 
-        # First, make sure we can connect to the database
+        # First, make sure we can instantiate and connect to the database
         try:
-            db_session.test_connection(args.login)
+            db_inst = db_session.DatabaseOperations(
+                credentials_filename=args.login,
+                dataset_serial=dataset_serial,
+            )
         except Exception as e:
             print(e)
+            raise
         # Make sure dataset is not already in database
-        if args.override == 0:
-            db_session.assert_unique_id(args.login, dataset_serial)
+        if not args.override:
+            db_inst.assert_unique_id()
 
-        # Make sure microscope isn't a float (nan)
+        # Make sure microscope is a string
         microscope = row.microscope
         if not isinstance(microscope, str):
-            microscope = "None"
-
-        # Make sure image file exists
-        file_name = row.file_name
-        assert os.path.isfile(file_name), \
-            "File doesn't exist: {}".format(file_name)
-
+            microscope = None
+        print('serial', file_nbr, dataset_serial)
         if upload_type == "frames":
-            meta_schema = row.meta_schema
-
-            # Get image stack and metadata
-            # ome.tif is the only file format tested at this point
-            assert file_name[-8:] == ".ome.tif", \
-                "Only supporting .ome.tif files for now"
-            # Folder name in S3 bucket
-            folder_name = "/".join([FRAME_FOLDER_NAME,
-                                    dataset_serial])
-            # Extract frames and metadata from file
-            im_stack, frames_meta, frames_json, global_meta, global_json = \
-                file_splitter.read_ome_tiff(
-                    file_name=file_name,
-                    schema_filename=meta_schema,
+            # Find get + metadata extraction class for this data type
+            if row.frames_format == "ome_tiff":
+                frames_inst = file_splitter.OmeTiffSplitter(
+                    data_path=row.file_name,
                     folder_name=folder_name,
-                    file_format=FRAME_FILE_FORMAT)
-            try:
-                data_uploader = s3_storage.DataStorage(
-                    folder_name=folder_name,
+                    file_format=FRAME_FILE_FORMAT,
                 )
-                if args.override == 0:
-                    data_uploader.assert_unique_id()
+                frames_inst.get_frames_and_metadata(
+                    schema_filename=row.meta_schema,
+                )
+            elif row.frames_format == "tif_folder":
+                frames_inst = file_splitter.TifFolderSplitter(
+                    data_path=row.file_name,
+                    folder_name=folder_name,
+                    file_format=FRAME_FILE_FORMAT,
+                )
+                frames_inst.get_frames_and_metadata()
+            else:
+                "Only 'ome_tiff' and 'tif_folder' are supported formats"\
+                    "for reading frames, not {}".format(row.frames_format)
+                raise NotImplementedError
+
+            frames_meta = frames_inst.get_frames_meta()
+            try:
                 # Upload stack frames to S3
                 data_uploader.upload_frames(
                     file_names=list(frames_meta["file_name"]),
-                    im_stack=im_stack,
+                    im_stack=frames_inst.get_imstack(),
                 )
-                print("Frames in {} uploaded to S3".format(file_name))
+                print("Frames in {} uploaded to S3".format(row.file_name))
             except AssertionError as e:
                 print("Project already on S3, moving on to DB entry")
                 print(e)
 
             # Add sliced metadata to database
             try:
-                db_session.insert_frames(
-                    credentials_filename=args.login,
-                    dataset_serial=dataset_serial,
+                db_inst.insert_frames(
                     description=row.description,
                     frames_meta=frames_meta,
-                    frames_json_meta=frames_json,
-                    global_meta=global_meta,
-                    global_json_meta=global_json,
+                    frames_json_meta=frames_inst.get_frames_json(),
+                    global_meta=frames_inst.get_global_meta(),
+                    global_json_meta=frames_inst.get_global_json(),
                     microscope=microscope,
                     parent_dataset=row.parent_dataset_id,
                 )
@@ -145,25 +163,21 @@ def upload_data_and_update_db(args):
         # File upload
         else:
             # Just upload file without opening it
-            folder_name = "/".join([FILE_FOLDER_NAME,
-                                    dataset_serial])
+            assert os.path.isfile(row.file_name), \
+                "File doesn't exist: {}".format(row.file_name)
+
             try:
-                data_uploader = s3_storage.DataStorage(
-                    folder_name=folder_name,
-                )
-                data_uploader.upload_file(file_name=file_name)
-                print("File {} uploaded to S3".format(file_name))
+                data_uploader.upload_file(file_name=row.file_name)
+                print("File {} uploaded to S3".format(row.file_name))
             except AssertionError as e:
-                print("File {} already on S3".format(dataset_serial))
+                print("File {} already on S3, moving on to DB entry")
                 print(e)
             # Add file entry to DB once I can get it tested
             global_json = {
-                "file_origin": file_name,
+                "file_origin": row.file_name,
             }
             try:
-                db_session.insert_file(
-                    credentials_filename=args.login,
-                    dataset_serial=dataset_serial,
+                db_inst.insert_file(
                     description=row.description,
                     folder_name=folder_name,
                     global_json_meta=global_json,
@@ -173,6 +187,7 @@ def upload_data_and_update_db(args):
                 print("File info for {} inserted in DB".format(dataset_serial))
             except AssertionError as e:
                 print("File {} already in database".format(dataset_serial))
+
         print("Successfully entered {} to S3 storage and database".format(
             dataset_serial)
         )

@@ -1,5 +1,3 @@
-
-
 def validate_id(id_str, check_letters=False):
     """
     Assert that the ID follows the naming convention
