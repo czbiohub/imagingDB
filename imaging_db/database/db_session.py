@@ -355,6 +355,7 @@ class DatabaseOperations:
                 .join(FramesGlobal) \
                 .join(DataSet) \
                 .filter(DataSet.dataset_serial == dataset.dataset_serial) \
+                .order_by(Frames.file_name) \
                 .all()
             # Get global and local metadata
             global_meta, frames_meta = self._get_meta_from_frames(frames)
