@@ -82,11 +82,11 @@ def upload_data_and_update_db(args):
                 upload_type)
         # Instantiate S3 uploader
         if upload_type == "frames":
-            folder_name = "/".join([FRAME_FOLDER_NAME, dataset_serial])
+            s3_dir = "/".join([FRAME_FOLDER_NAME, dataset_serial])
         else:
-            folder_name = "/".join([FILE_FOLDER_NAME, dataset_serial])
+            s3_dir = "/".join([FILE_FOLDER_NAME, dataset_serial])
         data_uploader = s3_storage.DataStorage(
-            folder_name=folder_name,
+            s3_dir=s3_dir,
         )
         if not args.override:
             data_uploader.assert_unique_id()
@@ -114,7 +114,7 @@ def upload_data_and_update_db(args):
             if row.frames_format == "ome_tiff":
                 frames_inst = file_splitter.OmeTiffSplitter(
                     data_path=row.file_name,
-                    folder_name=folder_name,
+                    s3_dir=s3_dir,
                     file_format=FRAME_FILE_FORMAT,
                 )
                 frames_inst.get_frames_and_metadata(
@@ -123,7 +123,7 @@ def upload_data_and_update_db(args):
             elif row.frames_format == "tif_folder":
                 frames_inst = file_splitter.TifFolderSplitter(
                     data_path=row.file_name,
-                    folder_name=folder_name,
+                    s3_dir=s3_dir,
                     file_format=FRAME_FILE_FORMAT,
                 )
                 frames_inst.get_frames_and_metadata()
@@ -179,7 +179,7 @@ def upload_data_and_update_db(args):
             try:
                 db_inst.insert_file(
                     description=row.description,
-                    folder_name=folder_name,
+                    s3_dir=s3_dir,
                     global_json_meta=global_json,
                     microscope=microscope,
                     parent_dataset=row.parent_dataset_id,

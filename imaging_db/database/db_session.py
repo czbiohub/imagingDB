@@ -179,7 +179,7 @@ class DatabaseOperations:
             )
             # Add global frame information
             new_frames_global = FramesGlobal(
-                folder_name=global_meta["folder_name"],
+                s3_dir=global_meta["s3_dir"],
                 nbr_frames=global_meta["nbr_frames"],
                 im_width=global_meta["im_width"],
                 im_height=global_meta["im_height"],
@@ -212,7 +212,7 @@ class DatabaseOperations:
 
     def insert_file(self,
                     description,
-                    folder_name,
+                    s3_dir,
                     global_json_meta,
                     microscope,
                     parent_dataset=None):
@@ -220,7 +220,7 @@ class DatabaseOperations:
         Upload file as is without splitting it to frames or extracting metadata
 
         :param str description: Short description of file
-        :param str folder_name: Folder in S3 bucket where data is stored
+        :param str s3_dir: Folder in S3 bucket where data is stored
         :param global_json_meta: Arbitrary metadata fields for file
         :param str microscope: microscope name
         :param str parent_dataset: Assign parent if not null
@@ -246,7 +246,7 @@ class DatabaseOperations:
             )
             # Add s3 location
             new_file_global = FileGlobal(
-                folder_name=folder_name,
+                s3_dir=s3_dir,
                 metadata_json=global_json_meta,
                 data_set=new_dataset,
             )
@@ -258,7 +258,7 @@ class DatabaseOperations:
         Get S3 folder name and all file names associated with unique
         project identifier.
 
-        :return str folder_name: Folder name containing file(s) on S3
+        :return str s3_dir: Folder name containing file(s) on S3
         :return list of strs file_names: List of file names for given dataset
         """
         # Create session
@@ -276,7 +276,7 @@ class DatabaseOperations:
                 file_name = file_global.metadata_json["file_origin"]
                 file_name = file_name.split("/")[-1]
 
-                return file_global.folder_name, [file_name]
+                return file_global.s3_dir, [file_name]
             else:
                 # Get frames
                 frames = session.query(Frames) \
@@ -285,12 +285,12 @@ class DatabaseOperations:
                     .filter(DataSet.dataset_serial == dataset.dataset_serial) \
                     .all()
 
-                folder_name = frames[0].frames_global.folder_name
+                s3_dir = frames[0].frames_global.s3_dir
                 file_names = []
                 for f in frames:
                     file_names.append(f.file_name)
 
-                return folder_name, file_names
+                return s3_dir, file_names
 
     def _get_meta_from_frames(self, frames):
         """
@@ -303,7 +303,7 @@ class DatabaseOperations:
         """
         # Collect global metadata that can be used to instantiate im_stack
         global_meta = {
-            "folder_name": frames[0].frames_global.folder_name,
+            "s3_dir": frames[0].frames_global.s3_dir,
             "nbr_frames": frames[0].frames_global.nbr_frames,
             "im_width": frames[0].frames_global.im_width,
             "im_height": frames[0].frames_global.im_height,

@@ -106,7 +106,7 @@ def download_data(args):
         # Just download file(s)
         assert args.download,\
             "You set metadata *and* download to False. You get nothing."
-        folder_name, file_names = db_inst.get_filenames()
+        s3_dir, file_names = db_inst.get_filenames()
     else:
         # Dataset should be split into frames, get metadata
         global_meta, frames_meta = db_inst.get_frames_meta()
@@ -126,12 +126,12 @@ def download_data(args):
         )
         frames_meta.to_csv(local_meta_filename, sep=",")
         # Extract folder and file names if we want to download
-        folder_name = global_meta["folder_name"]
+        s3_dir = global_meta["s3_dir"]
         file_names = frames_meta["file_name"]
 
     if args.download:
         data_loader = s3_storage.DataStorage(
-            folder_name=folder_name,
+            s3_dir=s3_dir,
         )
         for f in file_names:
             dest_path = os.path.join(dest_folder, f)

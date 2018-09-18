@@ -23,7 +23,7 @@ class FramesGlobal(Base):
     nbr_timepoints = Column(Integer)
     nbr_positions = Column(Integer)
     bit_depth = Column(String)
-    folder_name = Column(String)
+    s3_dir = Column(String)
     # Add potential to throw whatever metadata they want
     # in a JSONB object
     metadata_json = Column(JSONB)
@@ -36,7 +36,7 @@ class FramesGlobal(Base):
     )
 
     def __init__(self,
-                 folder_name,
+                 s3_dir,
                  nbr_frames,
                  im_width,
                  im_height,
@@ -48,7 +48,7 @@ class FramesGlobal(Base):
                  bit_depth,
                  metadata_json,
                  data_set):
-        self.folder_name = folder_name
+        self.s3_dir = s3_dir
         self.nbr_frames = nbr_frames
         self.im_width = im_width
         self.im_height = im_height
