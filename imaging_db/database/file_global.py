@@ -15,7 +15,7 @@ class FileGlobal(Base):
     __tablename__ = 'file_global'
 
     id = Column(Integer, primary_key=True)
-    folder_name = Column(String)
+    s3_dir = Column(String)
     # Add potential to throw whatever metadata they want
     # in a JSONB object
     metadata_json = Column(JSONB)
@@ -24,7 +24,7 @@ class FileGlobal(Base):
     data_set = relationship("DataSet",
                             backref=backref("file_global", uselist=False))
 
-    def __init__(self, folder_name, metadata_json, data_set):
-        self.folder_name = folder_name
+    def __init__(self, s3_dir, metadata_json, data_set):
+        self.s3_dir = s3_dir
         self.metadata_json = metadata_json
         self.data_set = data_set

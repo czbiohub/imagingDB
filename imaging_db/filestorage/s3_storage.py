@@ -8,15 +8,15 @@ from tqdm import tqdm
 class DataStorage:
     """Class for handling data uploads to S3"""
 
-    def __init__(self, folder_name):
+    def __init__(self, s3_dir):
         """
         Initialize S3 client and check that ID doesn't exist already
 
-        :param str folder_name: folder name in S3 bucket
+        :param str s3_dir: folder name in S3 bucket
         """
         self.bucket_name = "czbiohub-imaging"
         self.s3_client = boto3.client('s3')
-        self.folder_name = folder_name
+        self.s3_dir = s3_dir
 
     def assert_unique_id(self):
         """
@@ -25,9 +25,9 @@ class DataStorage:
         :raise AssertionError: if folder exists
         """
         response = self.s3_client.list_objects_v2(Bucket=self.bucket_name,
-                                                  Prefix=self.folder_name)
+                                                  Prefix=self.s3_dir)
         assert response['KeyCount'] == 0, \
-            "Key already exists on S3: {}".format(self.folder_name)
+            "Key already exists on S3: {}".format(self.s3_dir)
 
     def upload_frames(self, file_names, im_stack, file_format=".png"):
         """
@@ -43,7 +43,7 @@ class DataStorage:
                 len(file_names), im_stack.shape[-1])
 
         for i, file_name in enumerate(file_names):
-            key = "/".join([self.folder_name, file_name])
+            key = "/".join([self.s3_dir, file_name])
             # Make sure image doesn't already exist
             response = self.s3_client.list_objects_v2(
                 Bucket=self.bucket_name,
@@ -77,7 +77,7 @@ class DataStorage:
         self.assert_unique_id()
 
         file_no_path = file_name.split("/")[-1]
-        key = "/".join([self.folder_name, file_no_path])
+        key = "/".join([self.s3_dir, file_no_path])
         self.s3_client.upload_file(
             file_name,
             self.bucket_name,
@@ -92,7 +92,7 @@ class DataStorage:
         :return np.array im: 2D image
         """
 
-        key = "/".join([self.folder_name, file_name])
+        key = "/".join([self.s3_dir, file_name])
         byte_str = self.s3_client.get_object(
             Bucket=self.bucket_name,
             Key=key,
@@ -126,7 +126,7 @@ class DataStorage:
         Given global metadata, instantiate an image stack. The default order
         of frames is:
          X Y [gray/RGB] Z C T
-         Image width, height, colors (1 or 3), the z depth, channel, timepoint
+         Image height, width, colors (1 or 3), the z depth, channel, timepoint
 
         Retrieve all frames from local metadata and return image stack.
         Ones in stack shape indicates singleton dimensions. They are kept
@@ -139,12 +139,12 @@ class DataStorage:
         :return np.array im_stack: Stack of 2D images
         :return str dim_str: String indicating order of stack dimensions
             Possible values: XYGZCTP
-            X=im_width, Y=im_height, G=[gray/RGB] (1 or 3),
+            X=im_height, Y=im_width, G=[gray/RGB] (1 or 3),
             Z=slice_idx, C=channel_idx, T=time_idx, P=pos_idx
         """
         stack_shape = (
-            global_meta["im_width"],
             global_meta["im_height"],
+            global_meta["im_width"],
             global_meta["im_colors"],
             global_meta["nbr_slices"],
             global_meta["nbr_channels"],
@@ -181,7 +181,7 @@ class DataStorage:
         :param str file_name: full path to file
         :param str dest_path: full path to destination
         """
-        key = "/".join([self.folder_name, file_name])
+        key = "/".join([self.s3_dir, file_name])
         self.s3_client.download_file(
             self.bucket_name,
             key,

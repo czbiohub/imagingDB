@@ -54,7 +54,7 @@ def validate_global_meta(global_meta):
     :param dict global_meta: Global frames metadata
     :raise AssertionError: if not all keys are present
     """
-    keys = ["folder_name",
+    keys = ["s3_dir",
             "nbr_frames",
             "im_width",
             "im_height",
@@ -79,18 +79,18 @@ class FileSplitter(metaclass=ABCMeta):
 
     def __init__(self,
                  data_path,
-                 folder_name,
+                 s3_dir,
                  file_format=".png",
                  int2str_len=3):
         """
         :param str data_path: Full path to file (ome.tiff) or directory name
             (tif dir)
-        :param str folder_name: Folder name on S3 where data will be stored
+        :param str s3_dir: Folder name on S3 where data will be stored
         :param str file_format: Image file format (preferred is png)
         :param int int2str_len: How many integers will be added to each index
         """
         self.data_path = data_path
-        self.folder_name = folder_name
+        self.s3_dir = s3_dir
         self.file_format = file_format
         self.int2str_len = int2str_len
         self.im_stack = None
@@ -167,10 +167,10 @@ class FileSplitter(metaclass=ABCMeta):
         Lastly, add values to global_meta now that we have them all
         """
         self.global_meta = {
-            "folder_name": self.folder_name,
+            "s3_dir": self.s3_dir,
             "nbr_frames": nbr_frames,
-            "im_width": frame_shape[0],
-            "im_height": frame_shape[1],
+            "im_height": frame_shape[0],
+            "im_width": frame_shape[1],
             "im_colors": im_colors,
             "bit_depth": str(pixel_type),
             "nbr_slices": len(np.unique(self.frames_meta["slice_idx"])),
@@ -345,8 +345,8 @@ class TifFolderSplitter(FileSplitter):
                 meta_summary["BitDepth"]))
             raise ValueError
         # Create empty image stack and metadata dataframe and list
-        self.im_stack = np.empty((meta_summary["Width"],
-                                  meta_summary["Height"],
+        self.im_stack = np.empty((meta_summary["Height"],
+                                  meta_summary["Width"],
                                   im_colors,
                                   nbr_frames),
                                  dtype=bit_depth)
@@ -369,7 +369,7 @@ class TifFolderSplitter(FileSplitter):
         # Set global metadata
         self.set_global_meta(
             nbr_frames=nbr_frames,
-            frame_shape=[meta_summary["Width"], meta_summary["Height"]],
+            frame_shape=[meta_summary["Height"], meta_summary["Width"]],
             im_colors=im_colors,
             pixel_type=bit_depth,
         )
