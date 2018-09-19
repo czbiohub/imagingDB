@@ -3,7 +3,6 @@ import glob
 import numpy as np
 import os
 import pandas as pd
-import pims
 import tifffile
 
 import imaging_db.metadata.json_validator as json_validator
@@ -18,7 +17,7 @@ import imaging_db.metadata.json_validator as json_validator
 META_NAMES = ["ChannelIndex",
               "Slice",
               "FrameIndex",
-              "ChannelName",
+              "Channel",
               "FileName",
               "PositionIndex"]
 
@@ -212,27 +211,37 @@ class OmeTiffSplitter(FileSplitter):
                 self.data_path[-8:],
             )
 
-        frames = pims.TiffStack(self.data_path)
+        frames = tifffile.TiffFile(self.data_path)
         # Get global metadata
-        frame_shape = frames.frame_shape
-        nbr_frames = len(frames)
+        page = frames.pages[0]
+        frame_shape = [page.tags["ImageLength"].value,
+                       page.tags["ImageWidth"].value]
+        nbr_frames = len(frames.pages)
         # Encode color channel information
         im_colors = 1
         if len(frame_shape) == 3:
             im_colors = frame_shape[2]
+        bits_val = page.tags["BitsPerSample"].value
+        if bits_val == 16:
+            bit_depth = "uint16"
+        elif bits_val == 8:
+            bit_depth = "uint8"
+        else:
+            print("Bit depth must be 16 or 8, not {}".format(bits_val))
+            raise ValueError
 
         # Create image stack with image bit depth 16 or 8
         self.im_stack = np.empty((frame_shape[0],
                                   frame_shape[1],
                                   im_colors,
                                   nbr_frames),
-                                 dtype=frames.pixel_type)
+                                 dtype=bit_depth)
 
         # Get metadata schema
         meta_schema = json_validator.read_json_file(schema_filename)
         # IJMetadata only exists in first frame, so that goes into global json
         self.global_json, channel_names = json_validator.get_global_meta(
-            frame=frames._tiff[0],
+            page=page,
             file_name=self.data_path,
         )
 
@@ -244,11 +253,11 @@ class OmeTiffSplitter(FileSplitter):
         # so micromanager metadata goes into a separate list
         self.frames_json = []
         for i in range(nbr_frames):
-            frame = frames._tiff[i]
-            self.im_stack[..., i] = np.atleast_3d(frame.asarray())
+            page = frames.pages[i]
+            self.im_stack[..., i] = np.atleast_3d(page.asarray())
             # Get dict with metadata from json schema
             json_i, meta_i = json_validator.get_metadata_from_tags(
-                frame=frame,
+                page=page,
                 meta_schema=meta_schema,
                 validate=True,
             )
@@ -257,13 +266,6 @@ class OmeTiffSplitter(FileSplitter):
             for meta_name, df_name in zip(META_NAMES, DF_NAMES):
                 if meta_name in meta_i.keys():
                     self.frames_meta.loc[i, df_name] = meta_i[meta_name]
-                else:
-                    # Add special cases here
-                    # ChNames is a list that should be translated to channel name
-                    if meta_name == "ChannelName" and len(channel_names) > 0:
-                        # Check if ChNames (list of names) is present
-                        self.frames_meta.loc[i, "channel_name"] = \
-                            channel_names[meta_i["ChannelIndex"]]
 
             # Create a file name and add it
             im_name = self._get_imname(self.frames_meta.loc[i])
@@ -272,7 +274,7 @@ class OmeTiffSplitter(FileSplitter):
                 nbr_frames=nbr_frames,
                 frame_shape=frame_shape,
                 im_colors=im_colors,
-                pixel_type=frames.pixel_type
+                pixel_type=bit_depth
             )
 
 
