@@ -16,6 +16,9 @@
         "PositionIndex": {
           "type": "integer"
         },
+        "Channel": {
+          "type": "string"
+        },
         "Exposure-ms": {
           "type": "number"
         }
@@ -24,7 +27,8 @@
         "ChannelIndex",
         "Slice",
         "FrameIndex",
-        "PositionIndex"
+        "PositionIndex",
+        "Channel"
       ]
     }
   },

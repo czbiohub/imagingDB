@@ -108,14 +108,14 @@ def write_json_file(meta_dict, json_filename):
         write_file.write(json_dump)
 
 
-def get_metadata_from_tags(frame, meta_schema, validate=True):
+def get_metadata_from_tags(page, meta_schema, validate=True):
     """
     Populates metadata dict based on user specified schema
     NOTE: currently only supports flat structure, should add recursion
     if schemas are more complex
     TODO: Preprocess frame to dict and make metadata extraction recursive?
 
-    :param TiffPage frame: contains tags with metadata
+    :param tifffile page: contains tags with metadata
     :param dict meta_schema: JSON schema for required metadata
     :param bool validate: validate generated json dict against meta_schema
     :return dict json_required: all metadata in tags specified by schema
@@ -127,7 +127,7 @@ def get_metadata_from_tags(frame, meta_schema, validate=True):
     assert meta_schema["type"] == "object"
     for key, props in meta_schema["properties"].items():
         if props.get('type') == 'object':
-            json_required[key] = frame.tags[key].value
+            json_required[key] = page.tags[key].value
             req_params = props.get('required', [])
             if isinstance(req_params, str):
                 req_params = [req_params]
@@ -140,11 +140,11 @@ def get_metadata_from_tags(frame, meta_schema, validate=True):
     return json_required, meta_required
 
 
-def get_global_meta(frame, file_name):
+def get_global_meta(page, file_name):
     """
     Global meta consists of file origin and IJMetadata, because the latter
     only exists in the first frame
-    :param TiffPage frame: first frame containing IJMetadata
+    :param tifffile page: first page containing IJMetadata
     :param str file_name: full path to origin file
     :return dict global_json: global metadata, IJMetadata + file name
     :return list channel_names: channel names for frame metadata
@@ -154,7 +154,7 @@ def get_global_meta(frame, file_name):
     }
     channel_names = []
     try:
-        meta_temp = frame.tags["IJMetadata"].value["Info"]
+        meta_temp = page.tags["IJMetadata"].value["Info"]
         if isinstance(meta_temp, str):
             meta_temp = json.loads(meta_temp)
         global_json["IJMetadata"] = meta_temp
