@@ -108,9 +108,10 @@ def upload_data_and_update_db(args):
         microscope = row.microscope
         if not isinstance(microscope, str):
             microscope = None
-        print('serial', file_nbr, dataset_serial)
+
         if upload_type == "frames":
             # Find get + metadata extraction class for this data type
+            # TODO: Refactor this to dynamically instantiate class
             if row.frames_format == "ome_tiff":
                 frames_inst = file_splitter.OmeTiffSplitter(
                     data_path=row.file_name,
@@ -127,9 +128,16 @@ def upload_data_and_update_db(args):
                     file_format=FRAME_FILE_FORMAT,
                 )
                 frames_inst.get_frames_and_metadata()
+            elif row.frames_format == "tif_video":
+                frames_inst = file_splitter.TifVideoSplitter(
+                    data_path=row.file_name,
+                    s3_dir=s3_dir,
+                    file_format=FRAME_FILE_FORMAT,
+                )
+                frames_inst.get_frames_and_metadata()
             else:
-                "Only 'ome_tiff' and 'tif_folder' are supported formats"\
-                    "for reading frames, not {}".format(row.frames_format)
+                "Only 'ome_tiff', 'tif_folder' and tif_video are supported "\
+                    "formats for reading frames, not {}".format(row.frames_format)
                 raise NotImplementedError
 
             frames_meta = frames_inst.get_frames_meta()
@@ -173,9 +181,7 @@ def upload_data_and_update_db(args):
                 print("File {} already on S3, moving on to DB entry")
                 print(e)
             # Add file entry to DB once I can get it tested
-            global_json = {
-                "file_origin": row.file_name,
-            }
+            global_json = {"file_origin": row.file_name}
             try:
                 db_inst.insert_file(
                     description=row.description,
