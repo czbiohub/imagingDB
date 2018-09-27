@@ -161,6 +161,7 @@ class DatabaseOperations:
         # Create session
         with session_scope(self.credentials_filename) as session:
             # Check if ID already exist
+            print("dataset id", self.dataset_serial)
             datasets = session.query(DataSet) \
                 .filter(DataSet.dataset_serial == self.dataset_serial).all()
             assert len(datasets) == 0, \
