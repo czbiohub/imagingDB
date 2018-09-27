@@ -512,6 +512,33 @@ class TifVideoSplitter(FileSplitter):
     """
     Subclass for reading and splitting tif videos
     """
+    def set_frame_info(self, page):
+        """
+        Sets frame shape, im_colors and bit_depth for the class
+        Must be called once before setting global metadata
+
+        :param page page: Page read from tifffile
+        :return bool float2uint: True if bit depth is 32
+        """
+        # Encode color channel information
+        self.im_colors = page.tags["SamplesPerPixel"].value
+        self.frame_shape = [page.tags["ImageLength"].value,
+                            page.tags["ImageWidth"].value]
+
+        bits_val = page.tags["BitsPerSample"].value
+        float2uint = False
+        if bits_val == 16:
+            self.bit_depth = "uint16"
+        elif bits_val == 8:
+            self.bit_depth = "uint8"
+        elif bits_val == 32:
+            # Convert 32 bit float to uint16, the values seem to be ints anyway
+            self.bit_depth = "uint16"
+            float2uint = True
+        else:
+            print("Bit depth must be 16 or 8, not {}".format(bits_val))
+            raise ValueError
+        return float2uint
 
     def _get_params_from_str(self, im_description):
         """
@@ -547,32 +574,15 @@ class TifVideoSplitter(FileSplitter):
         frames = tifffile.TiffFile(self.data_path)
         # Get global metadata
         page = frames.pages[0]
-        frame_shape = [page.tags["ImageLength"].value,
-                       page.tags["ImageWidth"].value]
         nbr_frames = len(frames.pages)
-        # Encode color channel information
-        im_colors = page.tags["SamplesPerPixel"].value
-
-        bits_val = page.tags["BitsPerSample"].value
-        float2uint = False
-        if bits_val == 16:
-            bit_depth = "uint16"
-        elif bits_val == 8:
-            bit_depth = "uint8"
-        elif bits_val == 32:
-            # Convert 32 bit float to uint16, the values seem to be ints anyway
-            bit_depth = "uint16"
-            float2uint = True
-        else:
-            print("Bit depth must be 16 or 8, not {}".format(bits_val))
-            raise ValueError
+        float2uint = self.set_frame_info(page)
 
         # Create image stack with image bit depth 16 or 8
-        self.im_stack = np.empty((frame_shape[0],
-                                  frame_shape[1],
-                                  im_colors,
+        self.im_stack = np.empty((self.fframe_shape[0],
+                                  self.frame_shape[1],
+                                  self.im_colors,
                                   nbr_frames),
-                                 dtype=bit_depth)
+                                 dtype=self.bit_depth)
 
         # Get what little channel info there is from image description
         nbr_channels, nbr_timepoints = self._get_params_from_str(
@@ -614,9 +624,8 @@ class TifVideoSplitter(FileSplitter):
             self.frames_meta.loc[i] = meta_row
 
         # Set global metadata
-        self.set_global_meta(
-            nbr_frames=nbr_frames,
-            frame_shape=frame_shape,
-            im_colors=im_colors,
-            pixel_type=bit_depth,
+        self.set_global_meta(nbr_frames=nbr_frames)
+        self.upload_stack(
+            file_names=self.frames_meta["file_name"],
+            im_stack=self.im_stack,
         )
