@@ -6,6 +6,7 @@ import os
 import pandas as pd
 import tifffile
 
+import imaging_db.filestorage.s3_storage as s3_storage
 import imaging_db.metadata.json_validator as json_validator
 
 
@@ -80,12 +81,14 @@ class FileSplitter(metaclass=ABCMeta):
     def __init__(self,
                  data_path,
                  s3_dir,
+                 override,
                  file_format=".png",
                  int2str_len=3):
         """
-        :param str data_path: Full path to file (ome.tiff) or directory name
-            (tif dir)
+        :param str data_path: Full path to file or directory name
         :param str s3_dir: Folder name on S3 where data will be stored
+        :param bool override: Will not continue DataStorage if dataset is already
+         present on S3.
         :param str file_format: Image file format (preferred is png)
         :param int int2str_len: How many integers will be added to each index
         """
@@ -98,6 +101,11 @@ class FileSplitter(metaclass=ABCMeta):
         self.frames_json = None
         self.global_meta = None
         self.global_json = None
+        self.data_uploader = s3_storage.DataStorage(
+            s3_dir=s3_dir,
+        )
+        if not override:
+            self.data_uploader.assert_unique_id()
 
     def get_imstack(self):
         """
@@ -180,6 +188,17 @@ class FileSplitter(metaclass=ABCMeta):
         }
         validate_global_meta(self.global_meta)
 
+    def upload_data(self, file_names):
+        try:
+            # Upload stack frames to S3
+            self.data_uploader.upload_frames(
+                file_names=file_names,
+                im_stack=self.im_stack,
+            )
+        except AssertionError as e:
+            print("Project already on S3, moving on to DB entry")
+            print(e)
+
     @abstractmethod
     def get_frames_and_metadata(self):
         """
@@ -194,25 +213,8 @@ class OmeTiffSplitter(FileSplitter):
     Subclass for reading and splitting ome tiff files
     """
 
-    def get_frames_and_metadata(self, schema_filename):
-        """
-        reads ome.tiff file into memory and separates image frames and metadata.
-        Workaround in case I need to read ome-xml:
-        https://github.com/soft-matter/pims/issues/125
-        It is assumed that all metadata lives as dicts inside tiff frame tags.
-        NOTE: It seems like the IJMetadata Info field is a dict converted into
-        string, and it's only present in the first frame.
-
-        :param str schema_filename: Gull path to metadata json schema file
-        """
-        assert os.path.isfile(self.data_path), \
-            "File doesn't exist: {}".format(self.data_path)
-        assert self.data_path[-8:] == ".ome.tif", \
-            "File extension must be .ome.tif, not {}".format(
-                self.data_path[-8:],
-            )
-
-        frames = tifffile.TiffFile(self.data_path)
+    def split_file(self, file_path, schema_filename):
+        frames = tifffile.TiffFile(file_path)
         # Get global metadata
         page = frames.pages[0]
         frame_shape = [page.tags["ImageLength"].value,
@@ -241,19 +243,19 @@ class OmeTiffSplitter(FileSplitter):
         # Get metadata schema
         meta_schema = json_validator.read_json_file(schema_filename)
         # IJMetadata only exists in first frame, so that goes into global json
-        self.global_json, channel_names = json_validator.get_global_meta(
+        global_json, channel_names = json_validator.get_global_meta(
             page=page,
-            file_name=self.data_path,
+            file_name=file_path,
         )
         self.global_json["file_origin"] = self.data_path
 
         # Convert frames to numpy stack and collect metadata
         # Separate structured metadata (with known fields)
         # from unstructured, the latter goes into frames_json
-        self.frames_meta = make_dataframe(nbr_frames=nbr_frames)
+        frames_meta = make_dataframe(nbr_frames=nbr_frames)
         # Pandas doesn't really support inserting dicts into dataframes,
         # so micromanager metadata goes into a separate list
-        self.frames_json = []
+        frames_json = []
         for i in range(nbr_frames):
             page = frames.pages[i]
             self.im_stack[..., i] = np.atleast_3d(page.asarray())
@@ -263,7 +265,7 @@ class OmeTiffSplitter(FileSplitter):
                 meta_schema=meta_schema,
                 validate=True,
             )
-            self.frames_json.append(json_i)
+            frames_json.append(json_i)
             # Add required metadata fields to data frame
             for meta_name, df_name in zip(META_NAMES, DF_NAMES):
                 if meta_name in meta_i.keys():
@@ -271,14 +273,37 @@ class OmeTiffSplitter(FileSplitter):
 
             # Create a file name and add it
             im_name = self._get_imname(self.frames_meta.loc[i])
-            self.frames_meta.loc[i, "file_name"] = im_name
+            frames_meta.loc[i, "file_name"] = im_name
             self.set_global_meta(
                 nbr_frames=nbr_frames,
                 frame_shape=frame_shape,
                 im_colors=im_colors,
                 pixel_type=bit_depth
             )
+        return frames_meta, frames_json, global_json
 
+    def get_frames_and_metadata(self, schema_filename, positions):
+        """
+        Reads ome.tiff file into memory and separates image frames and metadata.
+        Workaround in case I need to read ome-xml:
+        https://github.com/soft-matter/pims/issues/125
+        It is assumed that all metadata lives as dicts inside tiff frame tags.
+        NOTE: It seems like the IJMetadata Info field is a dict converted into
+        string, and it's only present in the first frame.
+
+        :param str schema_filename: Gull path to metadata json schema file
+        """
+        # print("row info", row.parent_dataset_id, pd.isna(row.parent_dataset_id))
+        # print(row.positions, type(row.positions))
+        # pos = json.loads(row.positions)
+        # print(pos, type(pos), pos[1], type(pos[1]), max(pos))
+
+        if os.path.isfile(self.data_path):
+            # Run through processing only once
+            file_paths = [self.data_path]
+        else:
+            # Get position files in the folder
+            return
 
 class TifFolderSplitter(FileSplitter):
     """
