@@ -108,6 +108,21 @@ def write_json_file(meta_dict, json_filename):
         write_file.write(json_dump)
 
 
+def str2json(json_str):
+    """
+    Converts string to json dict or list.
+
+    :param str json_str: String containing dict or list
+    :return json_object: Dict or list
+    """
+    try:
+        json_object = json.loads(json_str)
+    except json.JSONDecodeError as e:
+        print("Invalid string to json conversion: {}, e: {}", json_str, e)
+        raise
+    return json_object
+
+
 def get_metadata_from_tags(page, meta_schema, validate=True):
     """
     Populates metadata dict based on user specified schema
@@ -140,28 +155,23 @@ def get_metadata_from_tags(page, meta_schema, validate=True):
     return json_required, meta_required
 
 
-def get_global_meta(page, file_name):
+def get_global_json(page, file_name):
     """
     Global meta consists of file origin and IJMetadata, because the latter
     only exists in the first frame
     :param tifffile page: first page containing IJMetadata
     :param str file_name: full path to origin file
     :return dict global_json: global metadata, IJMetadata + file name
-    :return list channel_names: channel names for frame metadata
     """
     global_json = {
         "file_origin": file_name,
     }
-    channel_names = []
     try:
         meta_temp = page.tags["IJMetadata"].value["Info"]
         if isinstance(meta_temp, str):
             meta_temp = json.loads(meta_temp)
         global_json["IJMetadata"] = meta_temp
-        channel_names = meta_temp["ChNames"]
-        if isinstance(channel_names, str):
-            channel_names = [channel_names]
     except Exception as e:
         print("Can't read IJMetadata", e)
 
-    return global_json, channel_names
+    return global_json
