@@ -84,7 +84,7 @@ class FileSplitter(metaclass=ABCMeta):
     def __init__(self,
                  data_path,
                  s3_dir,
-                 override,
+                 override=False,
                  file_format=".png",
                  int2str_len=3):
         """

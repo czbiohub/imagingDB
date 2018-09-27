@@ -128,6 +128,7 @@ def upload_data_and_update_db(args):
                 frames_inst = file_splitter.TifFolderSplitter(
                     data_path=row.file_name,
                     s3_dir=s3_dir,
+                    override=args.override,
                     file_format=FRAME_FILE_FORMAT,
                 )
                 frames_inst.get_frames_and_metadata()
@@ -135,6 +136,7 @@ def upload_data_and_update_db(args):
                 frames_inst = file_splitter.TifVideoSplitter(
                     data_path=row.file_name,
                     s3_dir=s3_dir,
+                    override=args.override,
                     file_format=FRAME_FILE_FORMAT,
                 )
                 frames_inst.get_frames_and_metadata()
@@ -143,7 +145,7 @@ def upload_data_and_update_db(args):
                     "formats for reading frames, not {}".format(row.frames_format)
                 raise NotImplementedError
 
-            # Add sliced metadata to database
+            # Add frames metadata to database
             try:
                 db_inst.insert_frames(
                     description=row.description,
