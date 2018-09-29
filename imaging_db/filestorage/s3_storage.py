@@ -102,7 +102,10 @@ class DataStorage:
 
     def get_stack(self, file_names, stack_shape, bit_depth, verbose=False):
         """
-        Given file names, fetch images and return image stack
+        Given file names, fetch images and return image stack.
+        This function assumes that the frames in the list are contiguous,
+        i.e. the length of the file name is will be the last dimension of
+        the image stack.
 
         :param list of str file_names: Frame file names
         :param tuple stack_shape: Shape of image stack
@@ -129,9 +132,9 @@ class DataStorage:
          Image height, width, colors (1 or 3), the z depth, channel, timepoint
 
         Retrieve all frames from local metadata and return image stack.
-        Ones in stack shape indicates singleton dimensions. They are kept
-        so that you can know which dimention is which. You can remove
-        singletons by using np.squeeze
+        Ones in stack shape indicates singleton dimensions.
+        The stack is then squeezed to remove singleton dimensions, and a string
+        is returned to indicate which dimensions are kept and in what order.
         TODO: Add option to customize image order
 
         :param dict global_meta: Global metadata for dataset

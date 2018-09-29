@@ -60,6 +60,8 @@ def upload_data_and_update_db(args):
         bool frames: Specify if the file should be split prior to upload
         str json_meta: If slice, give full path to json metadata schema
         str parent_dataset_id: Parent dataset unique ID if there is one
+        list positions: Which position files in folder to upload. Uploads all
+         if left empty and file_name is a folder. Only valid for ome-tiff uploads.
     """
     # Assert that csv file exists and load it
     assert os.path.isfile(args.csv), \
@@ -85,11 +87,6 @@ def upload_data_and_update_db(args):
             s3_dir = "/".join([FRAME_FOLDER_NAME, dataset_serial])
         else:
             s3_dir = "/".join([FILE_FOLDER_NAME, dataset_serial])
-        data_uploader = s3_storage.DataStorage(
-            s3_dir=s3_dir,
-        )
-        if not args.override:
-            data_uploader.assert_unique_id()
 
         # First, make sure we can instantiate and connect to the database
         try:
@@ -113,18 +110,25 @@ def upload_data_and_update_db(args):
             # Find get + metadata extraction class for this data type
             # TODO: Refactor this to dynamically instantiate class
             if row.frames_format == "ome_tiff":
+                positions = None
+                if hasattr(row, 'positions'):
+                    positions = row.positions
+
                 frames_inst = file_splitter.OmeTiffSplitter(
                     data_path=row.file_name,
                     s3_dir=s3_dir,
+                    override=args.override,
                     file_format=FRAME_FILE_FORMAT,
                 )
                 frames_inst.get_frames_and_metadata(
                     schema_filename=row.meta_schema,
+                    positions=positions,
                 )
             elif row.frames_format == "tif_folder":
                 frames_inst = file_splitter.TifFolderSplitter(
                     data_path=row.file_name,
                     s3_dir=s3_dir,
+                    override=args.override,
                     file_format=FRAME_FILE_FORMAT,
                 )
                 frames_inst.get_frames_and_metadata()
@@ -132,6 +136,7 @@ def upload_data_and_update_db(args):
                 frames_inst = file_splitter.TifVideoSplitter(
                     data_path=row.file_name,
                     s3_dir=s3_dir,
+                    override=args.override,
                     file_format=FRAME_FILE_FORMAT,
                 )
                 frames_inst.get_frames_and_metadata()
@@ -140,23 +145,11 @@ def upload_data_and_update_db(args):
                     "formats for reading frames, not {}".format(row.frames_format)
                 raise NotImplementedError
 
-            frames_meta = frames_inst.get_frames_meta()
-            try:
-                # Upload stack frames to S3
-                data_uploader.upload_frames(
-                    file_names=list(frames_meta["file_name"]),
-                    im_stack=frames_inst.get_imstack(),
-                )
-                print("Frames in {} uploaded to S3".format(row.file_name))
-            except AssertionError as e:
-                print("Project already on S3, moving on to DB entry")
-                print(e)
-
-            # Add sliced metadata to database
+            # Add frames metadata to database
             try:
                 db_inst.insert_frames(
                     description=row.description,
-                    frames_meta=frames_meta,
+                    frames_meta=frames_inst.get_frames_meta(),
                     frames_json_meta=frames_inst.get_frames_json(),
                     global_meta=frames_inst.get_global_meta(),
                     global_json_meta=frames_inst.get_global_json(),
@@ -166,14 +159,17 @@ def upload_data_and_update_db(args):
                 print("Frame info for {} inserted in DB"
                       .format(dataset_serial))
             except AssertionError as e:
-                print("Data set {} already in DB".format(dataset_serial))
-                print(e)
+                print("Data set {} already in DB".format(dataset_serial), e)
         # File upload
         else:
             # Just upload file without opening it
             assert os.path.isfile(row.file_name), \
                 "File doesn't exist: {}".format(row.file_name)
-
+            data_uploader = s3_storage.DataStorage(
+                s3_dir=s3_dir,
+            )
+            if not args.override:
+                data_uploader.assert_unique_id()
             try:
                 data_uploader.upload_file(file_name=row.file_name)
                 print("File {} uploaded to S3".format(row.file_name))
