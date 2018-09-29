@@ -3,6 +3,7 @@ import numpy as np
 
 import imaging_db.utils.image_utils as im_utils
 from tqdm import tqdm
+from tqdm._utils import _term_move_up
 
 
 class DataStorage:
@@ -42,8 +43,16 @@ class DataStorage:
             "Number of file names {} doesn't match slices {}".format(
                 len(file_names), im_stack.shape[-1])
 
-        for i, file_name in enumerate(file_names):
+        # Create the progress bar for the file_names
+        slice_prog_bar = tqdm(enumerate(file_names), total=len(file_names), desc='Slice')
+
+        for i, file_name in slice_prog_bar:
+            # Clear the terminal message
+            prefix = _term_move_up() + '\r'
+            slice_prog_bar.write(prefix+'')
+
             key = "/".join([self.s3_dir, file_name])
+
             # Make sure image doesn't already exist
             response = self.s3_client.list_objects_v2(
                 Bucket=self.bucket_name,
@@ -58,14 +67,16 @@ class DataStorage:
                     file_format=file_format,
                 )
                 # Upload slice to S3
-                print("Writing to S3", key)
+                #slice_prog_bar.set_description(file_name)
                 self.s3_client.put_object(
                     Bucket=self.bucket_name,
                     Key=key,
                     Body=im_bytes,
                 )
             except Exception as e:
-                print("Key already exists, continuing", e)
+                prefix = _term_move_up() + '\r'
+                #print("Key already exists, continuing", e)
+                slice_prog_bar.write(prefix+"Key already exists, continuing")
 
     def upload_file(self, file_name):
         """
