@@ -3,6 +3,7 @@
 import argparse
 import os
 import pandas as pd
+from tqdm import tqdm
 
 import imaging_db.cli.cli_utils as cli_utils
 import imaging_db.database.db_session as db_session
@@ -68,8 +69,11 @@ def upload_data_and_update_db(args):
         "File doesn't exist: {}".format(args.csv)
     files_data = pd.read_csv(args.csv)
 
+    # Create the progress bar object
+    file_prog = tqdm(files_data.iterrows(), total=files_data.shape[0], desc='Dataset')
+
     # Upload all files
-    for file_nbr, row in files_data.iterrows():
+    for file_nbr, row in file_prog:
         # Assert that ID is correctly formatted
         dataset_serial = row.dataset_id
         try:
@@ -156,8 +160,7 @@ def upload_data_and_update_db(args):
                     microscope=microscope,
                     parent_dataset=row.parent_dataset_id,
                 )
-                print("Frame info for {} inserted in DB"
-                      .format(dataset_serial))
+
             except AssertionError as e:
                 print("Data set {} already in DB".format(dataset_serial), e)
         # File upload
@@ -189,10 +192,6 @@ def upload_data_and_update_db(args):
                 print("File info for {} inserted in DB".format(dataset_serial))
             except AssertionError as e:
                 print("File {} already in database".format(dataset_serial))
-
-        print("Successfully entered {} to S3 storage and database".format(
-            dataset_serial)
-        )
 
 
 if __name__ == '__main__':

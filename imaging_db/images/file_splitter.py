@@ -5,6 +5,7 @@ import numpy as np
 import os
 import pandas as pd
 import tifffile
+from tqdm import tqdm
 
 import imaging_db.filestorage.s3_storage as s3_storage
 import imaging_db.metadata.json_validator as json_validator
@@ -385,7 +386,10 @@ class OmeTiffSplitter(FileSplitter):
             )
         self.frames_meta = make_dataframe(nbr_frames=None)
         self.frames_json = []
-        for file_path in file_paths:
+
+        pos_prog_bar = tqdm(file_paths, desc='Position')
+
+        for file_path in pos_prog_bar:
             file_meta, im_stack = self.split_file(
                 file_path,
                 schema_filename,
