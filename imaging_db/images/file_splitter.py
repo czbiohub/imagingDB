@@ -467,7 +467,8 @@ class TifFolderSplitter(FileSplitter):
         """
         Global metadata dict is assumed to be in the same folder in a file
         named metadata.txt
-        Frame metadata is extracted from each frame
+        Frame metadata is extracted from each frame, and frames are uploaded
+        on a file by file basis
         File naming convention is assumed to be:
         img_channelname_t***_p***_z***.tif
         """
@@ -482,18 +483,18 @@ class TifFolderSplitter(FileSplitter):
         )
         channel_names = self.global_json["Summary"]["ChNames"]
         self.set_frame_info(self.global_json["Summary"])
-        # Create empty image stack and metadata dataframe and list
-        self.im_stack = np.empty((self.frame_shape[0],
+        # Create empty image stack where last dimension is 1 for upload_frames
+        im_stack = np.empty((self.frame_shape[0],
                                   self.frame_shape[1],
                                   self.im_colors,
-                                  nbr_frames),
+                                  1),
                                  dtype=self.bit_depth)
         self.frames_meta = make_dataframe(nbr_frames=nbr_frames)
         self.frames_json = []
         # Loop over all the frames to get data and metadata
         for i, frame_path in enumerate(frame_paths):
             imtif = tifffile.TiffFile(frame_path)
-            self.im_stack[..., i] = np.atleast_3d(imtif.asarray())
+            im_stack[..., 0] = np.atleast_3d(imtif.asarray())
             tiftags = imtif.pages[0].tags
             # Get all frame specific metadata
             dict_i = {}
@@ -504,12 +505,12 @@ class TifFolderSplitter(FileSplitter):
                 im_path=frame_path,
                 channel_names=channel_names,
             )
+            self.upload_stack(
+                file_names=[self.frames_meta.loc[i, "file_name"]],
+                im_stack=im_stack,
+            )
         # Set global metadata
         self.set_global_meta(nbr_frames=nbr_frames)
-        self.upload_stack(
-            file_names=self.frames_meta["file_name"],
-            im_stack=self.im_stack,
-        )
 
 
 class TifVideoSplitter(FileSplitter):
