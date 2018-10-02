@@ -45,10 +45,10 @@ class DataStorage:
 
         # Create the progress bar for the file_names
         slice_prog_bar = tqdm(enumerate(file_names), total=len(file_names), desc='Slice')
+        prefix = _term_move_up() + '\r'
 
         for i, file_name in slice_prog_bar:
             # Clear the terminal message
-            prefix = _term_move_up() + '\r'
             slice_prog_bar.write(prefix+'')
 
             key = "/".join([self.s3_dir, file_name])
@@ -67,15 +67,12 @@ class DataStorage:
                     file_format=file_format,
                 )
                 # Upload slice to S3
-                #slice_prog_bar.set_description(file_name)
                 self.s3_client.put_object(
                     Bucket=self.bucket_name,
                     Key=key,
                     Body=im_bytes,
                 )
             except Exception as e:
-                prefix = _term_move_up() + '\r'
-                #print("Key already exists, continuing", e)
                 slice_prog_bar.write(prefix+"Key already exists, continuing")
 
     def upload_file(self, file_name):

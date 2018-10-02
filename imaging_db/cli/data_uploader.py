@@ -160,8 +160,7 @@ def upload_data_and_update_db(args):
                     microscope=microscope,
                     parent_dataset=row.parent_dataset_id,
                 )
-                # print("Frame info for {} inserted in DB"
-                #       .format(dataset_serial))
+
             except AssertionError as e:
                 print("Data set {} already in DB".format(dataset_serial), e)
         # File upload
