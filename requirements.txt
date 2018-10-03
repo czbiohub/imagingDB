@@ -3,6 +3,7 @@ boto3
 jsonschema
 nose
 numpy
+opencv-python
 pandas
 psycopg2
 testfixtures
