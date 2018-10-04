@@ -67,6 +67,37 @@ for database access (see db_credentials.json)
 
 Please contact Jenny on Slack (or jenny.folkesson@czbiohub.org) if you want to be added as a user.
 
+## Running imagingDB on a server
+
+The recommended use is running imagingDB inside a docker container. 
+Build the supplied Dockerfile.imagingDB, e.g.:
+```buildoutcfg
+docker build -t imaging_db:python37 -f Dockerfile.imagingDB .
+```
+Then you will have all the requirements necessary installed. Additionally,
+you will need you AWS keys inside your Docker container. If you've stored your
+key and secret key in ~/.aws/credentials you can get them as environment variable by running:
+```buildoutcfg
+AWS_ACCESS_KEY_ID=$(aws --profile default configure get aws_access_key_id)
+AWS_SECRET_ACCESS_KEY=$(aws --profile default configure get aws_secret_access_key)
+```
+Then you can set these variables when you start your Docker container:
+```buildoutcfg
+docker run -it -p <your port>:8888 -v <your data dir>:/data -v <your repo>:/imagingDB -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY imaging_db:python36  bash 
+```
+Note: exposing your environment variables like this is not the safest way to 
+set up AWS credentials. Future work will include a safer way to do this.
+
+If you want to launch a Jupyter notebook inside your container, you can do so with the following command:
+```buildoutcfg
+jupyter notebook --ip=0.0.0.0 --port=8888 --allow-root --no-browser
+```
+Then you can access your notebooks in your browser at (if you're on fry):
+```buildoutcfg
+http://fry:<whatever port you mapped to when starting up docker container>
+```
+You will need to copy/paste the token generated in your Docker container. 
+
 ## Running the tests
 
 There's currently some patchy unit test coverage which I intend to expand as

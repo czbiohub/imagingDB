@@ -1,0 +1,38 @@
+FROM python:3.7
+
+# Install from requirements
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+# Install Jupyter
+RUN pip install --no-cache-dir jupyter
+
+RUN apt-get update && \
+        apt-get install -y \
+        build-essential \
+        cmake \
+        git \
+        vim \
+        wget \
+        unzip \
+        yasm \
+        pkg-config \
+        libav-tools \
+        libswscale-dev \
+        libtbb2 \
+        libtbb-dev \
+        libjpeg-dev \
+        libpng-dev \
+        libtiff-dev \
+        libavformat-dev \
+        libpq-dev
+
+# Install OpenCV
+RUN pip install --no-cache-dir opencv-python
+
+WORKDIR /imagingDB
+
+ENV PYTHONPATH /imagingDB
+
+# Expose Jupyter port
+EXPOSE 8888

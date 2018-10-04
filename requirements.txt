@@ -1,10 +1,9 @@
 awscli
 boto3
-cv2
-json
 jsonschema
 nose
-os
+numpy
+opencv-python
 pandas
 psycopg2
 testfixtures
