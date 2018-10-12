@@ -90,3 +90,14 @@ class TestOmeTiffSplitter(unittest.TestCase):
         page = frames.pages[0]
         meta_temp = json.loads(page.tags["IJMetadata"].value["Info"])
         assert len(meta_temp["InitialPositionList"]) == 2
+
+        frames_inst = ometif_splitter.OmeTiffSplitter(
+            data_path=file_path,
+            s3_dir="raw_frames/ISP-2005-06-09-20-00-00-0001",
+            override=False,
+            file_format=".png",
+        )
+        frames_inst.get_frames_and_metadata(
+            schema_filename='/imaging_db/db_schema.json',
+            positions=[1, 3],
+        )
