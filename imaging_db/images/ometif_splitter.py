@@ -3,7 +3,7 @@ import numpy as np
 import os
 import pandas as pd
 import tifffile
-import tqdm
+from tqdm import tqdm
 
 import imaging_db.images.file_splitter as file_splitter
 import imaging_db.metadata.json_validator as json_validator
