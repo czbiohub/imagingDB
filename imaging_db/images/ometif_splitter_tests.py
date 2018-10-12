@@ -17,12 +17,9 @@ def get_ijmeta():
     Helper function that creates IJMetadata
     :return: IJMetadata as string
     """
-    ijmeta = {"Info": {"InitialPositionList": [{"Label": "Pos1"},
-                                               {"Label": "Pos3"}]}}
+    ijinfo = {"InitialPositionList": [{"Label": "Pos1"}, {"Label": "Pos3"}]}
+    return {"Info": json.dumps(ijinfo)}
 
-    ijmeta = json.dumps(ijmeta)
-    ijmeta = ijmeta.encode('utf-16<')
-    return ijmeta
 
 def get_mmmeta(pos_idx=1):
     """
@@ -54,24 +51,23 @@ class TestOmeTiffSplitter(unittest.TestCase):
         self.im[0:5, 3:7] = 5000
         # Metadata
         mmmetadata = get_mmmeta()
-        ijmetadata = get_ijmeta()
-        extra_tags = [('MicroManagerMetadata', 's', 0, mmmetadata, True),
-                      ('IJMetadata', 's', 0, ijmetadata, True),
-                      ('IJMetadata', 's', 0, ijmetadata, True)]
+        ijmeta = get_ijmeta()
+        extra_tags = [('MicroManagerMetadata', 's', 0, mmmetadata, True)]
         # Save test ome tif file
         file_path = os.path.join(self.temp_path, "test_Pos_1.ome.tif")
         tifffile.imsave(file_path,
                         self.im,
-                        extratags=extra_tags)
+                        ijmetadata=ijmeta,
+                        extratags=extra_tags,
+                        )
 
         mmmetadata = get_mmmeta(pos_idx=3)
-        extra_tags = [('MicroManagerMetadata', 's', 0, mmmetadata, True),
-                      ('IJMetadata', 's', 0, ijmetadata, True)]
+        extra_tags = [('MicroManagerMetadata', 's', 0, mmmetadata, True)]
         # Save test ome tif file
         file_path = os.path.join(self.temp_path, "test_Pos_3.ome.tif")
         tifffile.imsave(file_path,
                         self.im,
-                        description="test",
+                        ijmetadata=ijmeta,
                         extratags=extra_tags)
         # Setup mock S3 bucket
         self.mock = mock_s3()
@@ -91,13 +87,6 @@ class TestOmeTiffSplitter(unittest.TestCase):
     def test_init(self):
         file_path = os.path.join(self.temp_path, "test_Pos_1.ome.tif")
         frames = tifffile.TiffFile(file_path)
-        print(len(frames.pages))
         page = frames.pages[0]
-        print("MMMetadata", page.tags['MicroManagerMetadata'].value)
-        ijmeta = page.tags['IJMetadata'].value
-        print("meta type", type(ijmeta))
-        print(ijmeta)
-        ijmeta = json.loads(ijmeta)
-        print("IJMetadata", ijmeta)
-
-        assert 0 == 1
+        meta_temp = json.loads(page.tags["IJMetadata"].value["Info"])
+        assert len(meta_temp["InitialPositionList"]) == 2
