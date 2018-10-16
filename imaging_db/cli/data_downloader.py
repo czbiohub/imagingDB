@@ -8,6 +8,7 @@ import imaging_db.database.db_session as db_session
 import imaging_db.filestorage.s3_storage as s3_storage
 import imaging_db.metadata.json_validator as json_validator
 
+from tqdm import tqdm
 
 def parse_args():
     """
@@ -26,6 +27,7 @@ def parse_args():
         type=str,
         help="Main destination folder, in which a subfolder named args.id "
              "\will be created",
+        required=True
     )
     parser.add_argument(
         '--metadata',
@@ -85,6 +87,8 @@ def download_data(args):
     # Create output directory as a subdirectory in args.dest named
     # dataset_serial. It stops if the subdirectory already exists to avoid
     # the risk of overwriting existing data
+
+
     dest_folder = os.path.join(args.dest, dataset_serial)
     try:
         os.makedirs(dest_folder, exist_ok=False)
@@ -133,7 +137,7 @@ def download_data(args):
         data_loader = s3_storage.DataStorage(
             s3_dir=s3_dir,
         )
-        for f in file_names:
+        for f in tqdm(file_names):
             dest_path = os.path.join(dest_folder, f)
             data_loader.download_file(file_name=f, dest_path=dest_path)
 
