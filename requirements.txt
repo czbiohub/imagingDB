@@ -1,6 +1,7 @@
 awscli
 boto3
 jsonschema
+moto
 nose
 numpy
 opencv-python
