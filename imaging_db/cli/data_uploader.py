@@ -8,7 +8,9 @@ from tqdm import tqdm
 import imaging_db.cli.cli_utils as cli_utils
 import imaging_db.database.db_session as db_session
 import imaging_db.filestorage.s3_storage as s3_storage
-import imaging_db.images.file_splitter as file_splitter
+import imaging_db.images.ometif_splitter as ometif_splitter
+import imaging_db.images.tiffolder_splitter as tiffolder_splitter
+import imaging_db.images.tifvideo_splitter as tifvideo_splitter
 
 FILE_FOLDER_NAME = "raw_files"
 FRAME_FOLDER_NAME = "raw_frames"
@@ -118,7 +120,7 @@ def upload_data_and_update_db(args):
                 if hasattr(row, 'positions'):
                     positions = row.positions
 
-                frames_inst = file_splitter.OmeTiffSplitter(
+                frames_inst = ometif_splitter.OmeTiffSplitter(
                     data_path=row.file_name,
                     s3_dir=s3_dir,
                     override=args.override,
@@ -129,7 +131,7 @@ def upload_data_and_update_db(args):
                     positions=positions,
                 )
             elif row.frames_format == "tif_folder":
-                frames_inst = file_splitter.TifFolderSplitter(
+                frames_inst = tiffolder_splitter.TifFolderSplitter(
                     data_path=row.file_name,
                     s3_dir=s3_dir,
                     override=args.override,
@@ -137,7 +139,7 @@ def upload_data_and_update_db(args):
                 )
                 frames_inst.get_frames_and_metadata()
             elif row.frames_format == "tif_video":
-                frames_inst = file_splitter.TifVideoSplitter(
+                frames_inst = tifvideo_splitter.TifVideoSplitter(
                     data_path=row.file_name,
                     s3_dir=s3_dir,
                     override=args.override,
