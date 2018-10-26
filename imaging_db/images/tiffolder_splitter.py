@@ -79,9 +79,14 @@ class TifFolderSplitter(file_splitter.FileSplitter):
         frame_paths = glob.glob(os.path.join(self.data_path, "*.tif"))
         nbr_frames = len(frame_paths)
 
-        self.global_json = json_validator.read_json_file(
-            os.path.join(self.data_path, "metadata.txt"),
-        )
+        try:
+            self.global_json = json_validator.read_json_file(
+                os.path.join(self.data_path, "metadata.txt"),
+            )
+        except FileNotFoundError as e:
+            print("can't find metadata.txt file, global json will be empty", e)
+            self.global_json = {}
+
         channel_names = self.global_json["Summary"]["ChNames"]
         self.set_frame_info(self.global_json["Summary"])
         # Create empty image stack where last dimension is 1 for upload_frames

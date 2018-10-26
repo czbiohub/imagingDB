@@ -1,6 +1,11 @@
 # Imaging Database
 
-This is a pipeline for interacting with images and their metadata using the imaging database.
+This is a data management system intended for microscopy images. It consists of two components:
+* **File storage**, which is currently an AWS S3 bucket named 'czbiohub-imaging'. If repurposing this repo,
+make sure to change the bucket name in the DataStorage class.
+* **A database**. We're using an AWS PostgreSQL RDS database, and SQLAchemy ORM for database
+calls using Python. 
+
 Each image is assumed to be a dataset which has a unique identifier associated with
 it of the form 
 

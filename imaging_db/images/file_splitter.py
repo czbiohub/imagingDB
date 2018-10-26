@@ -190,6 +190,9 @@ class FileSplitter(metaclass=ABCMeta):
 
         :param int nbr_frames: Total number of frames
         """
+        assert not isinstance(self.frame_shape, type(None)),\
+            "Frame shape is empty"
+
         self.global_meta = {
             "s3_dir": self.s3_dir,
             "nbr_frames": nbr_frames,
