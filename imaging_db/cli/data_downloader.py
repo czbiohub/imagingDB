@@ -23,6 +23,30 @@ def parse_args():
         help="Unique dataset identifier",
     )
     parser.add_argument(
+        '--p',
+        type=int,
+        nargs='+',
+        help="Tuple containing position indices to download",
+    )
+    parser.add_argument(
+        '--t',
+        type=int,
+        nargs='+',
+        help="Tuple containing time indices to download",
+    )
+    parser.add_argument(
+        '--c',
+        type=str,
+        nargs='+',
+        help="Tuple containing the channels to download",
+    )
+    parser.add_argument(
+        '--z',
+        type=int,
+        nargs='+',
+        help="Tuple containing the z slices to download",
+    )
+    parser.add_argument(
         '--dest',
         type=str,
         help="Main destination folder, in which a subfolder named args.id "
@@ -112,8 +136,34 @@ def download_data(args):
             "You set metadata *and* download to False. You get nothing."
         s3_dir, file_names = db_inst.get_filenames()
     else:
+        # Get all the slicing args and recast as tuples
+        if args.p is None:
+            pos = 'all'
+        
+        else:
+            pos = tuple(args.p)
+
+        if args.t is None:
+            times = 'all'
+        
+        else:
+            times = tuple(args.t)
+
+        if args.c is None:
+            channels = 'all'
+        
+        else:
+            channels = tuple(args.c)
+
+        if args.z is None:
+            slices = 'all'
+        
+        else:
+            slices = tuple(args.z)
+
         # Dataset should be split into frames, get metadata
-        global_meta, frames_meta = db_inst.get_frames_meta()
+        global_meta, frames_meta = db_inst.get_frames_meta(pos=pos, times=times, channels=channels, slices=slices)
+
         # Write global metadata to dest folder
         global_meta_filename = os.path.join(
             dest_folder,
