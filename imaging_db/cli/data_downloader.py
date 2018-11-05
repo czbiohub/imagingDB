@@ -161,7 +161,7 @@ def download_data(args):
         else:
             slices = tuple(args.z)
 
-        # Dataset should be split into frames, get metadata
+        # Get the metadata from the requested frames
         global_meta, frames_meta = db_inst.get_frames_meta(pos=pos, times=times, channels=channels, slices=slices)
 
         # Write global metadata to dest folder

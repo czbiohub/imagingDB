@@ -299,7 +299,17 @@ class DatabaseOperations:
         """
         Get specific slices of a set of Frames
 
+        :param Query frames: all of the frames to be sliced
+        :param [str, tuple] pos: a tuple containing position indices to be fetched use 
+                        'all' to get all positions.
+        :param [str, tuple] times: a tuple containing time indices to be fetched use 
+                        'all' to get all times.
+        :param [str, tuple] channels: a tuple containing channels (use channel names (e.g., 'Cy3').) 
+                                    to be fetched use 'all' to get all channels.
+        :param [str, tuple] slices: a tuple containing slice indices to be fetched use 
+                        'all' to get all channels.
 
+        :return Query sliced_frames: query that yields the requested frames
         """
 
         sliced_frames = frames
@@ -395,8 +405,15 @@ class DatabaseOperations:
         """
         Get information for all frames in dataset associated with unique
         project identifier.
-        TODO: Add support for only retrieving select channels
-        (or whatever data subsets users are typically interested in)
+
+        :param [str, tuple] pos: a tuple containing position indices to be fetched use 
+                        'all' to get all positions.
+        :param [str, tuple] times: a tuple containing time indices to be fetched use 
+                        'all' to get all times.
+        :param [str, tuple] channels: a tuple containing channels (use channel names (e.g., 'Cy3').) 
+                                    to be fetched use 'all' to get all channels.
+        :param [str, tuple] slices: a tuple containing slice indices to be fetched use 
+                        'all' to get all channels.
 
         :return dict global_meta: Global metadata for dataset
         :return dataframe frames_meta: Metadata for each frame
