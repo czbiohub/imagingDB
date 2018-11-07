@@ -1,15 +1,17 @@
 from contextlib import contextmanager
-import numpy as np
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
-from imaging_db.database.base import Base
-from imaging_db.database.file_global import FileGlobal
-from imaging_db.database.frames_global import FramesGlobal
-from imaging_db.database.frames import Frames
-from imaging_db.database.dataset import DataSet
 import imaging_db.images.file_splitter as file_splitter
 import imaging_db.metadata.json_validator as json_validator
+from imaging_db.database.base import Base
+from imaging_db.database.dataset import DataSet
+from imaging_db.database.file_global import FileGlobal
+from imaging_db.database.frames import Frames
+from imaging_db.database.frames_global import FramesGlobal
+
+import numpy as np
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 
 @contextmanager
@@ -237,7 +239,9 @@ class DatabaseOperations:
                 )
             # If parent dataset identifier is given, find its key and insert it
             parent_key = self._get_parent(session, parent_dataset)
-            # First insert project ID in the main Project table with frames=False
+
+            # First insert project ID in the main Project table
+            # with frames=False
             new_dataset = DataSet(
                 dataset_serial=self.dataset_serial,
                 description=description,
@@ -254,7 +258,8 @@ class DatabaseOperations:
             session.add(new_dataset)
             session.add(new_file_global)
 
-    def get_filenames(self):
+    def get_filenames(
+            self, pos='all', times='all', channels='all', slices='all'):
         """
         Get S3 folder name and all file names associated with unique
         project identifier.
@@ -280,18 +285,100 @@ class DatabaseOperations:
                 return file_global.s3_dir, [file_name]
             else:
                 # Get frames
-                frames = session.query(Frames) \
+                all_frames = session.query(Frames) \
                     .join(FramesGlobal) \
                     .join(DataSet) \
-                    .filter(DataSet.dataset_serial == dataset.dataset_serial) \
-                    .all()
+                    .filter(DataSet.dataset_serial == dataset.dataset_serial)
 
-                s3_dir = frames[0].frames_global.s3_dir
+                sliced_frames = self._slice_frames(
+                    all_frames, pos=pos, times=times, channels=channels,
+                    slices=slices)
+
+                s3_dir = sliced_frames[0].frames_global.s3_dir
+
                 file_names = []
-                for f in frames:
+                for f in sliced_frames:
                     file_names.append(f.file_name)
 
                 return s3_dir, file_names
+
+    def _slice_frames(
+            self, frames, pos='all', times='all', channels='all',
+            slices='all'):
+        """
+        Get specific slices of a set of Frames
+
+        :param Query frames: all of the frames to be sliced
+        :param [str, tuple(int)] pos: a tuple containing position indices
+                        to be fetched use 'all' to get all positions.
+                        If illegal indices are given, an AssertionError
+                        will be raised. If an illegal type is given, a
+                        ValueError will be given.
+        :param [str, tuple(int)] times: a tuple containing time indices
+                        to be fetched use 'all' to get all times.
+                        If illegal indices are given, an AssertionError
+                        will be raised. If an illegal type is given,
+                        a ValueError will be given.
+        :param [str, tuple] channels: a tuple containing channels
+                                    (use channel names (e.g., 'Cy3').)
+                                    to be fetched use 'all' to get all
+                                    channels. If illegal indices are
+                                    given, an AssertionErrorwill be
+                                    raised. If an illegal type is given,
+                                    a ValueError will be given.
+        :param [str, tuple] slices: a tuple containing slice indices to
+                                    be fetched use 'all' to get all
+                                    channels. If illegal indices are given,
+                                    an AssertionErrorwill be raised.
+                                    If an illegal type is given, a
+                                    ValueError will be given.
+
+        :return Query sliced_frames: query that yields the requested frames
+        """
+
+        sliced_frames = frames
+
+        # Filter by channel
+        if channels == 'all':
+            pass
+        elif type(channels) is tuple:
+            sliced_frames = sliced_frames.filter(
+                Frames.channel_name.in_(channels))
+
+        else:
+            raise ValueError('Invalid channel query')
+
+        # Filter by slice
+        if slices == 'all':
+            pass
+        elif type(slices) is tuple:
+            sliced_frames = sliced_frames.filter(Frames.slice_idx.in_(slices))
+        else:
+            raise ValueError('Invalid slice query')
+
+        # Filter by time
+        if times == 'all':
+            pass
+        elif type(slices) is tuple:
+            sliced_frames = sliced_frames.filter(Frames.time_idx.in_(times))
+        else:
+            raise ValueError('Invalid slice query')
+
+        # Filter by position
+        if pos == 'all':
+            pass
+        elif type(slices) is tuple:
+            sliced_frames = sliced_frames.filter(Frames.pos_idx.in_(pos))
+        else:
+            raise ValueError('Invalid slice query')
+
+        sliced_frames.order_by(Frames.slice_idx).order_by(Frames.channel_idx) \
+            .order_by(Frames.time_idx).order_by(Frames.pos_idx)
+
+        assert sliced_frames.count() > 0,\
+            'No frames matched the query'
+
+        return sliced_frames
 
     def _get_meta_from_frames(self, frames):
         """
@@ -319,7 +406,7 @@ class DatabaseOperations:
 
         # Metadata that will be returned from the DB for each frame
         frames_meta = file_splitter.make_dataframe(
-            nbr_frames=global_meta["nbr_frames"],
+            nbr_frames=frames.count(),
         )
         for i, f in enumerate(frames):
             frames_meta.loc[i] = [
@@ -332,12 +419,22 @@ class DatabaseOperations:
             ]
         return global_meta, frames_meta
 
-    def get_frames_meta(self):
+    def get_frames_meta(
+        self, pos='all', times='all', channels='all',
+            slices='all'):
         """
         Get information for all frames in dataset associated with unique
         project identifier.
-        TODO: Add support for only retrieving select channels
-        (or whatever data subsets users are typically interested in)
+
+        :param [str, tuple] pos: a tuple containing position indices to
+                        be fetched use 'all' to get all positions.
+        :param [str, tuple] times: a tuple containing time indices to be
+                        fetched use 'all' to get all times.
+        :param [str, tuple] channels: a tuple containing channels (use
+                                    channel names (e.g., 'Cy3').) to be
+                                    fetched use 'all' to get all channels.
+        :param [str, tuple] slices: a tuple containing slice indices
+                        to be fetched use 'all' to get all channels.
 
         :return dict global_meta: Global metadata for dataset
         :return dataframe frames_meta: Metadata for each frame
@@ -352,12 +449,17 @@ class DatabaseOperations:
                 "This dataset has not been split into frames"
 
             # Get frames in datset
-            frames = session.query(Frames) \
+            all_frames = session.query(Frames) \
                 .join(FramesGlobal) \
                 .join(DataSet) \
-                .filter(DataSet.dataset_serial == dataset.dataset_serial) \
-                .order_by(Frames.file_name) \
-                .all()
+                .filter(DataSet.dataset_serial == dataset.dataset_serial)
+
+            # Get the specified slices
+            sliced_frames = self._slice_frames(
+                    all_frames, pos=pos, times=times, channels=channels,
+                    slices=slices)
+
             # Get global and local metadata
-            global_meta, frames_meta = self._get_meta_from_frames(frames)
+            global_meta, frames_meta = self._get_meta_from_frames(
+                sliced_frames)
             return global_meta, frames_meta

@@ -10,6 +10,7 @@ import imaging_db.metadata.json_validator as json_validator
 
 from tqdm import tqdm
 
+
 def parse_args():
     """
     Parse command line arguments for CLI
@@ -21,6 +22,30 @@ def parse_args():
         '--id',
         type=str,
         help="Unique dataset identifier",
+    )
+    parser.add_argument(
+        '-p', '--positions',
+        type=int,
+        nargs='+',
+        help="Tuple containing position indices to download",
+    )
+    parser.add_argument(
+        '-t', '--times',
+        type=int,
+        nargs='+',
+        help="Tuple containing time indices to download",
+    )
+    parser.add_argument(
+        '-c', '--channels',
+        type=str,
+        nargs='+',
+        help="Tuple containing the channels to download",
+    )
+    parser.add_argument(
+        '-z', '--slices',
+        type=int,
+        nargs='+',
+        help="Tuple containing the z slices to download",
     )
     parser.add_argument(
         '--dest',
@@ -88,7 +113,6 @@ def download_data(args):
     # dataset_serial. It stops if the subdirectory already exists to avoid
     # the risk of overwriting existing data
 
-
     dest_folder = os.path.join(args.dest, dataset_serial)
     try:
         os.makedirs(dest_folder, exist_ok=False)
@@ -112,8 +136,31 @@ def download_data(args):
             "You set metadata *and* download to False. You get nothing."
         s3_dir, file_names = db_inst.get_filenames()
     else:
-        # Dataset should be split into frames, get metadata
-        global_meta, frames_meta = db_inst.get_frames_meta()
+        # Get all the slicing args and recast as tuples
+        if args.positions is None:
+            pos = 'all'
+        else:
+            pos = tuple(args.positions)
+
+        if args.times is None:
+            times = 'all'
+        else:
+            times = tuple(args.times)
+
+        if args.channels is None:
+            channels = 'all'
+        else:
+            channels = tuple(args.channels)
+
+        if args.slices is None:
+            slices = 'all'
+        else:
+            slices = tuple(args.slices)
+
+        # Get the metadata from the requested frames
+        global_meta, frames_meta = db_inst.get_frames_meta(
+            pos=pos, times=times, channels=channels, slices=slices)
+
         # Write global metadata to dest folder
         global_meta_filename = os.path.join(
             dest_folder,
