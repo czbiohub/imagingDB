@@ -42,7 +42,7 @@ def parse_args():
         help="Tuple containing the channels to download",
     )
     parser.add_argument(
-        '--z', '--slices',
+        '-z', '--slices',
         type=int,
         nargs='+',
         help="Tuple containing the z slices to download",
@@ -137,25 +137,25 @@ def download_data(args):
         s3_dir, file_names = db_inst.get_filenames()
     else:
         # Get all the slicing args and recast as tuples
-        if args.p is None:
+        if args.positions is None:
             pos = 'all'
         else:
-            pos = tuple(args.p)
+            pos = tuple(args.positions)
 
-        if args.t is None:
+        if args.times is None:
             times = 'all'
         else:
-            times = tuple(args.t)
+            times = tuple(args.times)
 
-        if args.c is None:
+        if args.channels is None:
             channels = 'all'
         else:
-            channels = tuple(args.c)
+            channels = tuple(args.channels)
 
-        if args.z is None:
+        if args.slices is None:
             slices = 'all'
         else:
-            slices = tuple(args.z)
+            slices = tuple(args.slices)
 
         # Get the metadata from the requested frames
         global_meta, frames_meta = db_inst.get_frames_meta(
