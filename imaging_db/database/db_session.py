@@ -317,42 +317,35 @@ class DatabaseOperations:
         # Filter by channel
         if channels == 'all':
             pass
-
         elif type(channels) is tuple:
             sliced_frames = sliced_frames.filter(Frames.channel_name.in_(channels))
 
         else:
-            print('Invalid channel query')
+            raise ValueError('Invalid channel query')
 
         # Filter by slice
         if slices == 'all':
             pass
-
         elif type(slices) is tuple:
             sliced_frames = sliced_frames.filter(Frames.slice_idx.in_(slices))
-
         else:
-            print('Invalid slice query')
+            raise ValueError('Invalid slice query')
 
         # Filter by time
         if times == 'all':
             pass
-
         elif type(slices) is tuple:
             sliced_frames = sliced_frames.filter(Frames.time_idx.in_(timess))
-
         else:
-            print('Invalid slice query')
+            raise ValueError('Invalid slice query')
 
-        # Filter by sosition
+        # Filter by position
         if pos == 'all':
             pass
-
         elif type(slices) is tuple:
             sliced_frames = sliced_frames.filter(Frames.pos_idx.in_(pos))
-
         else:
-            print('Invalid slice query')
+            raise ValueError('Invalid slice query')
 
         sliced_frames.order_by(Frames.slice_idx).order_by(Frames.channel_idx) \
             .order_by(Frames.time_idx).order_by(Frames.pos_idx)
