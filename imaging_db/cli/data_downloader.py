@@ -10,6 +10,7 @@ import imaging_db.metadata.json_validator as json_validator
 
 from tqdm import tqdm
 
+
 def parse_args():
     """
     Parse command line arguments for CLI
@@ -23,25 +24,25 @@ def parse_args():
         help="Unique dataset identifier",
     )
     parser.add_argument(
-        '--p',
+        '-p', '--positions',
         type=int,
         nargs='+',
         help="Tuple containing position indices to download",
     )
     parser.add_argument(
-        '--t',
+        '-t', '--times',
         type=int,
         nargs='+',
         help="Tuple containing time indices to download",
     )
     parser.add_argument(
-        '--c',
+        '-c', '--channels',
         type=str,
         nargs='+',
         help="Tuple containing the channels to download",
     )
     parser.add_argument(
-        '--z',
+        '--z', '--slices',
         type=int,
         nargs='+',
         help="Tuple containing the z slices to download",
@@ -112,7 +113,6 @@ def download_data(args):
     # dataset_serial. It stops if the subdirectory already exists to avoid
     # the risk of overwriting existing data
 
-
     dest_folder = os.path.join(args.dest, dataset_serial)
     try:
         os.makedirs(dest_folder, exist_ok=False)
@@ -139,30 +139,27 @@ def download_data(args):
         # Get all the slicing args and recast as tuples
         if args.p is None:
             pos = 'all'
-        
         else:
             pos = tuple(args.p)
 
         if args.t is None:
             times = 'all'
-        
         else:
             times = tuple(args.t)
 
         if args.c is None:
             channels = 'all'
-        
         else:
             channels = tuple(args.c)
 
         if args.z is None:
             slices = 'all'
-        
         else:
             slices = tuple(args.z)
 
         # Get the metadata from the requested frames
-        global_meta, frames_meta = db_inst.get_frames_meta(pos=pos, times=times, channels=channels, slices=slices)
+        global_meta, frames_meta = db_inst.get_frames_meta(
+            pos=pos, times=times, channels=channels, slices=slices)
 
         # Write global metadata to dest folder
         global_meta_filename = os.path.join(
