@@ -1,15 +1,17 @@
 from contextlib import contextmanager
-import numpy as np
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
-from imaging_db.database.base import Base
-from imaging_db.database.file_global import FileGlobal
-from imaging_db.database.frames_global import FramesGlobal
-from imaging_db.database.frames import Frames
-from imaging_db.database.dataset import DataSet
 import imaging_db.images.file_splitter as file_splitter
 import imaging_db.metadata.json_validator as json_validator
+from imaging_db.database.base import Base
+from imaging_db.database.dataset import DataSet
+from imaging_db.database.file_global import FileGlobal
+from imaging_db.database.frames import Frames
+from imaging_db.database.frames_global import FramesGlobal
+
+import numpy as np
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 
 @contextmanager
@@ -237,7 +239,9 @@ class DatabaseOperations:
                 )
             # If parent dataset identifier is given, find its key and insert it
             parent_key = self._get_parent(session, parent_dataset)
-            # First insert project ID in the main Project table with frames=False
+
+            # First insert project ID in the main Project table
+            # with frames=False
             new_dataset = DataSet(
                 dataset_serial=self.dataset_serial,
                 description=description,
@@ -254,7 +258,8 @@ class DatabaseOperations:
             session.add(new_dataset)
             session.add(new_file_global)
 
-    def get_filenames(self, pos='all', times='all', channels='all', slices='all'):
+    def get_filenames(
+            self, pos='all', times='all', channels='all', slices='all'):
         """
         Get S3 folder name and all file names associated with unique
         project identifier.
@@ -285,7 +290,9 @@ class DatabaseOperations:
                     .join(DataSet) \
                     .filter(DataSet.dataset_serial == dataset.dataset_serial)
 
-                sliced_frames = self._slice_frames(all_frames, pos=pos, times=times, channels=channels, slices=slices)
+                sliced_frames = self._slice_frames(
+                    all_frames, pos=pos, times=times, channels=channels,
+                    slices=slices)
 
                 s3_dir = sliced_frames[0].frames_global.s3_dir
 
@@ -295,19 +302,36 @@ class DatabaseOperations:
 
                 return s3_dir, file_names
 
-    def _slice_frames(self, frames, pos='all', times='all', channels='all', slices='all'):
+    def _slice_frames(
+            self, frames, pos='all', times='all', channels='all',
+            slices='all'):
         """
         Get specific slices of a set of Frames
 
         :param Query frames: all of the frames to be sliced
-        :param [str, tuple] pos: a tuple containing position indices to be fetched use 
-                        'all' to get all positions.
-        :param [str, tuple] times: a tuple containing time indices to be fetched use 
-                        'all' to get all times.
-        :param [str, tuple] channels: a tuple containing channels (use channel names (e.g., 'Cy3').) 
-                                    to be fetched use 'all' to get all channels.
-        :param [str, tuple] slices: a tuple containing slice indices to be fetched use 
-                        'all' to get all channels.
+        :param [str, tuple(int)] pos: a tuple containing position indices
+                        to be fetched use 'all' to get all positions.
+                        If illegal indices are given, an AssertionError
+                        will be raised. If an illegal type is given, a
+                        ValueError will be given.
+        :param [str, tuple(int)] times: a tuple containing time indices
+                        to be fetched use 'all' to get all times.
+                        If illegal indices are given, an AssertionError
+                        will be raised. If an illegal type is given,
+                        a ValueError will be given.
+        :param [str, tuple] channels: a tuple containing channels
+                                    (use channel names (e.g., 'Cy3').)
+                                    to be fetched use 'all' to get all
+                                    channels. If illegal indices are
+                                    given, an AssertionErrorwill be
+                                    raised. If an illegal type is given,
+                                    a ValueError will be given.
+        :param [str, tuple] slices: a tuple containing slice indices to
+                                    be fetched use 'all' to get all
+                                    channels. If illegal indices are given,
+                                    an AssertionErrorwill be raised.
+                                    If an illegal type is given, a
+                                    ValueError will be given.
 
         :return Query sliced_frames: query that yields the requested frames
         """
@@ -318,7 +342,8 @@ class DatabaseOperations:
         if channels == 'all':
             pass
         elif type(channels) is tuple:
-            sliced_frames = sliced_frames.filter(Frames.channel_name.in_(channels))
+            sliced_frames = sliced_frames.filter(
+                Frames.channel_name.in_(channels))
 
         else:
             raise ValueError('Invalid channel query')
@@ -335,7 +360,7 @@ class DatabaseOperations:
         if times == 'all':
             pass
         elif type(slices) is tuple:
-            sliced_frames = sliced_frames.filter(Frames.time_idx.in_(timess))
+            sliced_frames = sliced_frames.filter(Frames.time_idx.in_(times))
         else:
             raise ValueError('Invalid slice query')
 
@@ -394,19 +419,22 @@ class DatabaseOperations:
             ]
         return global_meta, frames_meta
 
-    def get_frames_meta(self, pos='all', times='all', channels='all', slices='all'):
+    def get_frames_meta(
+        self, pos='all', times='all', channels='all',
+            slices='all'):
         """
         Get information for all frames in dataset associated with unique
         project identifier.
 
-        :param [str, tuple] pos: a tuple containing position indices to be fetched use 
-                        'all' to get all positions.
-        :param [str, tuple] times: a tuple containing time indices to be fetched use 
-                        'all' to get all times.
-        :param [str, tuple] channels: a tuple containing channels (use channel names (e.g., 'Cy3').) 
-                                    to be fetched use 'all' to get all channels.
-        :param [str, tuple] slices: a tuple containing slice indices to be fetched use 
-                        'all' to get all channels.
+        :param [str, tuple] pos: a tuple containing position indices to
+                        be fetched use 'all' to get all positions.
+        :param [str, tuple] times: a tuple containing time indices to be
+                        fetched use 'all' to get all times.
+        :param [str, tuple] channels: a tuple containing channels (use
+                                    channel names (e.g., 'Cy3').) to be
+                                    fetched use 'all' to get all channels.
+        :param [str, tuple] slices: a tuple containing slice indices
+                        to be fetched use 'all' to get all channels.
 
         :return dict global_meta: Global metadata for dataset
         :return dataframe frames_meta: Metadata for each frame
@@ -427,8 +455,11 @@ class DatabaseOperations:
                 .filter(DataSet.dataset_serial == dataset.dataset_serial)
 
             # Get the specified slices
-            sliced_frames = self._slice_frames(all_frames, pos=pos, times=times, channels=channels, slices=slices)
+            sliced_frames = self._slice_frames(
+                    all_frames, pos=pos, times=times, channels=channels,
+                    slices=slices)
 
             # Get global and local metadata
-            global_meta, frames_meta = self._get_meta_from_frames(sliced_frames)
+            global_meta, frames_meta = self._get_meta_from_frames(
+                sliced_frames)
             return global_meta, frames_meta
