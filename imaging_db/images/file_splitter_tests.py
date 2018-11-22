@@ -137,7 +137,6 @@ class TestFileSplitter(unittest.TestCase):
         self.mock_inst.set_global_meta(nbr_frames=nbr_frames)
         # Assert contents
         meta = self.mock_inst.get_global_meta()
-        print(meta)
         nose.tools.assert_equal(meta['s3_dir'], self.test_dir)
         nose.tools.assert_equal(meta['nbr_frames'], nbr_frames)
         nose.tools.assert_equal(meta['im_height'], test_shape[0])
