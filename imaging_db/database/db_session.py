@@ -117,6 +117,8 @@ class DatabaseOperations:
         :return int parent_key: primary key of parent dataset
         """
         parent_key = None
+        if isinstance(parent_dataset, type(None)):
+            return parent_key
         if isinstance(parent_dataset, str):
             if parent_dataset.lower() == "none" or len(parent_dataset) == 0:
                 parent_dataset = None
