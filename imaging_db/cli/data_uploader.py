@@ -8,9 +8,8 @@ from tqdm import tqdm
 import imaging_db.cli.cli_utils as cli_utils
 import imaging_db.database.db_session as db_session
 import imaging_db.filestorage.s3_storage as s3_storage
-import imaging_db.images.ometif_splitter as ometif_splitter
-import imaging_db.images.tiffolder_splitter as tiffolder_splitter
-import imaging_db.images.tifvideo_splitter as tifvideo_splitter
+import imaging_db.metadata.json_validator as json_validator
+import imaging_db.utils.aux_utils as aux_utils
 
 FILE_FOLDER_NAME = "raw_files"
 FRAME_FOLDER_NAME = "raw_frames"
@@ -35,6 +34,11 @@ def parse_args():
         help="Full path to file containing JSON with DB login credentials",
     )
     parser.add_argument(
+        '--config',
+        type=str,
+        help="Full path to file containing JSON with upload configurations",
+    )
+    parser.add_argument(
         '--override',
         dest="override",
         action="store_true",
@@ -53,26 +57,70 @@ def upload_data_and_update_db(args):
     TODO: Add logging instead of printing
 
     :param list args:    parsed args containing
-        str login: Full path to json file containing login credentials
-        str csv: Full path to csv file containing the following fields
+        login: Full path to json file containing login credentials
+        csv: Full path to csv file containing the following fields
         for each file to be uploaded:
-
-        str dataset_id: Unique dataset ID <ID>-YYYY-MM-DD-HH-MM-SS-<SSSS>
-        str file_name: Full path to file to be uploaded
-        str description: Short description of file
-        bool frames: Specify if the file should be split prior to upload
-        str json_meta: If slice, give full path to json metadata schema
-        str parent_dataset_id: Parent dataset unique ID if there is one
-        list positions: Which position files in folder to upload. Uploads all
-         if left empty and file_name is a folder. Only valid for ome-tiff uploads.
+            str dataset_id: Unique dataset ID <ID>-YYYY-MM-DD-HH-MM-SS-<SSSS>
+            str file_name: Full path to file to be uploaded
+            str description: Short description of file
+            str parent_dataset_id: Parent dataset unique ID if there is one
+                list positions: Which position files in folder to upload.
+                Uploads all if left empty and file_name is a folder.
+                Only valid for ome-tiff uploads.
+        config: Full path co json config file containing the fields:
+            str upload_type: Specify if the file should be split prior to upload
+                Valid options: 'frames' or 'file'
+            str frames_format: Which file splitter class to use.
+                Valid options: 'ome_tiff', 'tiffolder', 'tifvideo'
+            str json_meta: If slice, give full path to json metadata schema
     """
     # Assert that csv file exists and load it
     assert os.path.isfile(args.csv), \
         "File doesn't exist: {}".format(args.csv)
     files_data = pd.read_csv(args.csv)
 
+    # Read and validate config json
+    config_json = json_validator.read_json_file(
+        json_filename=args.config,
+        schema_name="CONFIG_SCHEMA",
+    )
+
+    # Assert that upload type is valid
+    upload_type = config_json['upload_type'].lower()
+    assert upload_type in {"file", "frames"}, \
+        "upload_type should be 'file' or 'frames', not {}".format(
+            upload_type)
+
+    # Make sure microscope is a string
+    microscope = None
+    if isinstance(config_json['microscope'], str):
+        microscope = config_json['microscope']
+
+    if upload_type == 'frames':
+        # If upload type is frames, check from frames format
+        if 'frames_format' in config_json:
+            frames_format = config_json['frames_format']
+        else:
+            # Set default to ome_tiff
+            frames_format = 'ome_tiff'
+        assert frames_format in {'ome_tiff', 'tif_folder', 'tif_video'}, \
+            ("frames_format should be 'ome_tiff', 'tif_folder' or 'tif_video'",
+             "not {}".format(frames_format))
+        class_dict = {'ome_tiff': 'OmeTiffSplitter',
+                      'tif_folder': 'TifFolderSplitter',
+                      'tif_video': 'TifVideoSplitter',
+                      'tiff': 'OmeTiffSplitter',
+                      'ome_tif': 'OmeTiffSplitter'}
+        # Dynamically import class
+        splitter_class = aux_utils.import_class(
+            'images',
+            class_dict[frames_format],
+        )
+
     # Create the progress bar object
-    file_prog = tqdm(files_data.iterrows(), total=files_data.shape[0], desc='Dataset')
+    file_prog = tqdm(files_data.iterrows(),
+                     total=files_data.shape[0],
+                     desc='Dataset')
 
     # Upload all files
     for file_nbr, row in file_prog:
@@ -83,11 +131,6 @@ def upload_data_and_update_db(args):
         except AssertionError as e:
             print("Invalid ID:", e)
 
-        # Assert that upload type is valid
-        upload_type = row.upload_type.lower()
-        assert upload_type in {"file", "frames"}, \
-            "upload_type should be 'file' or 'frames', not {}".format(
-                upload_type)
         # Instantiate S3 uploader
         if upload_type == "frames":
             s3_dir = "/".join([FRAME_FOLDER_NAME, dataset_serial])
@@ -107,50 +150,28 @@ def upload_data_and_update_db(args):
         if not args.override:
             db_inst.assert_unique_id()
 
-        # Make sure microscope is a string
-        microscope = row.microscope
-        if not isinstance(microscope, str):
-            microscope = None
-
         if upload_type == "frames":
-            # Find get + metadata extraction class for this data type
-            # TODO: Refactor this to dynamically instantiate class
+            # Instantiate splitter class
+            frames_inst = splitter_class(
+                data_path=row.file_name,
+                s3_dir=s3_dir,
+                override=args.override,
+                file_format=FRAME_FILE_FORMAT,
+            )
+            # Get kwargs if any
+            kwargs = {}
             if row.frames_format == "ome_tiff":
                 positions = None
-                if hasattr(row, 'positions'):
-                    positions = row.positions
-
-                frames_inst = ometif_splitter.OmeTiffSplitter(
-                    data_path=row.file_name,
-                    s3_dir=s3_dir,
-                    override=args.override,
-                    file_format=FRAME_FILE_FORMAT,
-                )
-                frames_inst.get_frames_and_metadata(
-                    schema_filename=row.meta_schema,
-                    positions=positions,
-                )
-            elif row.frames_format == "tif_folder":
-                frames_inst = tiffolder_splitter.TifFolderSplitter(
-                    data_path=row.file_name,
-                    s3_dir=s3_dir,
-                    override=args.override,
-                    file_format=FRAME_FILE_FORMAT,
-                )
-                frames_inst.get_frames_and_metadata()
-            elif row.frames_format == "tif_video":
-                frames_inst = tifvideo_splitter.TifVideoSplitter(
-                    data_path=row.file_name,
-                    s3_dir=s3_dir,
-                    override=args.override,
-                    file_format=FRAME_FILE_FORMAT,
-                )
-                frames_inst.get_frames_and_metadata()
-            else:
-                "Only 'ome_tiff', 'tif_folder' and tif_video are supported "\
-                    "formats for reading frames, not {}".format(row.frames_format)
-                raise NotImplementedError
-
+                if 'positions' in config_json:
+                    positions = config_json['positions']
+                kwargs['positions'] = positions
+                kwargs['meta_schema'] = config_json['meta_schema']
+                filename_parser = None
+                if 'filename_parser' in config_json:
+                    filename_parser = config_json['filename_parser']
+                kwargs['filename_parser'] = filename_parser
+            # Extract metadata and split file into frames
+            frames_inst.get_frames_and_metadata(**kwargs)
             # Add frames metadata to database
             try:
                 db_inst.insert_frames(

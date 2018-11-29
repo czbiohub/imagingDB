@@ -112,7 +112,7 @@ class TifVideoSplitter(file_splitter.FileSplitter):
                 dict_i[t] = tiftags[t].value
             self.frames_json.append(dict_i)
 
-            meta_row = dict.fromkeys(DF_NAMES)
+            meta_row = dict.fromkeys(file_splitter.DF_NAMES)
             meta_row["channel_name"] = None
             meta_row["channel_idx"] = channel_idx
             meta_row["time_idx"] = time_idx

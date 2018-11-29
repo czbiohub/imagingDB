@@ -15,6 +15,18 @@ CREDENTIALS_SCHEMA = {
     "required": ["drivername", "username", "password", "host", "port", "dbname"],
 }
 
+CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "upload_type": {"type": "string"},
+        "frames_format": {"type": "string"},
+        "meta_schema": {"type": "string"},
+        "microscope": {"type": "string"},
+        "filename_parser": {"type": "integer"},
+    },
+    "required": ["upload_type", "microscope"],
+}
+
 # More Micromanager metadata properties should be added
 # Ask Kevin which ones are required
 MICROMETA_SCHEMA = {
@@ -25,7 +37,7 @@ MICROMETA_SCHEMA = {
         "FrameIndex": {"type": "integer"},
         "Exposure-ms": {"type": "number"},
     },
-    "required": ["ChannelIndex", "Slice", "FrameIndex"]
+    "required": ["ChannelIndex", "Slice", "FrameIndex"],
 }
 
 
