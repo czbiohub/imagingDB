@@ -103,12 +103,12 @@ def upload_data_and_update_db(args):
         else:
             # Set default to ome_tiff
             frames_format = 'ome_tiff'
-        assert frames_format in {'ome_tiff', 'tif_folder', 'tif_video'}, \
-            ("frames_format should be 'ome_tiff', 'tif_folder' or 'tif_video'",
+        assert frames_format in {'ome_tiff', 'tif_folder', 'tif_id'}, \
+            ("frames_format should be 'ome_tiff', 'tif_folder' or 'tif_id'",
              "not {}".format(frames_format))
         class_dict = {'ome_tiff': 'OmeTiffSplitter',
                       'tif_folder': 'TifFolderSplitter',
-                      'tif_video': 'TifVideoSplitter',
+                      'tif_id': 'TifIDSplitter',
                       'tiff': 'OmeTiffSplitter',
                       'ome_tif': 'OmeTiffSplitter'}
         # Dynamically import class

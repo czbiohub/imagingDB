@@ -1,3 +1,3 @@
 from imaging_db.images.ometif_splitter import OmeTiffSplitter
 from imaging_db.images.tiffolder_splitter import TifFolderSplitter
-from imaging_db.images.tifvideo_splitter import TifVideoSplitter
+from imaging_db.images.tif_id_splitter import TifIDSplitter

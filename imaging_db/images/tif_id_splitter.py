@@ -6,9 +6,11 @@ import tifffile
 import imaging_db.images.file_splitter as file_splitter
 
 
-class TifVideoSplitter(file_splitter.FileSplitter):
+class TifIDSplitter(file_splitter.FileSplitter):
     """
-    Subclass for reading and splitting tif videos
+    Subclass for reading and splitting tif files that are missing MicroManager
+    metadata. It relies on the ImageDescription tag, which is assumed to
+    be a sting encoding 'nchannels', ''nslices' etc.
     """
     def set_frame_info(self, page):
         """
@@ -49,15 +51,23 @@ class TifVideoSplitter(file_splitter.FileSplitter):
         """
         # Split on new lines
         str_split = im_description.split("\n")
-        nbr_channels = 1
-        nbr_timepoints = 1
+        indices = {
+            'nbr_channels': 1,
+            'nbr_timepoints': 1,
+            'nbr_slices': 1,
+            'nbr_positions': 1,
+        }
         for s in str_split:
             # Haven't seen an example of pos and slices so can't encode them
             if s.find("channels") == 0:
-                nbr_channels = int(s.split("=")[1])
+                indices['nbr_channels'] = int(s.split("=")[1])
             if s.find("frames") == 0:
-                nbr_timepoints = int(s.split("=")[1])
-        return nbr_channels, nbr_timepoints
+                indices['nbr_timepoints'] = int(s.split("=")[1])
+            if s.find("slices") == 0:
+                indices['nbr_slices'] = int(s.split("=")[1])
+            if s.find("positions") == 0:
+                indices['nbr_positions'] = int(s.split("=")[1])
+        return indices
 
     def get_frames_and_metadata(self):
         """
@@ -83,7 +93,7 @@ class TifVideoSplitter(file_splitter.FileSplitter):
                                  dtype=self.bit_depth)
 
         # Get what little channel info there is from image description
-        nbr_channels, nbr_timepoints = self._get_params_from_str(
+        indices = self._get_params_from_str(
             page.tags["ImageDescription"].value,
         )
         self.global_json = {"file_origin": self.data_path}
@@ -93,8 +103,10 @@ class TifVideoSplitter(file_splitter.FileSplitter):
         self.frames_json = []
         # Loop over all the frames to get data and metadata
         variable_iterator = itertools.product(
-            range(nbr_timepoints),
-            range(nbr_channels),
+            range(indices['nbr_timepoints']),
+            range(indices['nbr_positions']),
+            range(indices['nbr_slices']),
+            range(indices['nbr_channels']),
         )
         for i, (time_idx, channel_idx) in enumerate(variable_iterator):
             page = frames.pages[i]
