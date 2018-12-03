@@ -35,11 +35,19 @@ def parse_args():
         nargs='+',
         help="Tuple containing time indices to download",
     )
-    parser.add_argument(
+    # You can specify channel indices or names, not both
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
         '-c', '--channels',
         type=str,
         nargs='+',
-        help="Tuple containing the channels to download",
+        help="Tuple containing the channel names to download",
+    )
+    group.add_argument(
+        '--channel_ids',
+        type=str,
+        nargs='+',
+        help="Tuple containing the channel indices to download",
     )
     parser.add_argument(
         '-z', '--slices',
@@ -152,6 +160,11 @@ def download_data(args):
         else:
             channels = tuple(args.channels)
 
+        if args.channel_ids is None:
+            channel_ids = 'all'
+        else:
+            channel_ids = tuple(args.channel_ids)
+
         if args.slices is None:
             slices = 'all'
         else:
@@ -159,7 +172,12 @@ def download_data(args):
 
         # Get the metadata from the requested frames
         global_meta, frames_meta = db_inst.get_frames_meta(
-            pos=pos, times=times, channels=channels, slices=slices)
+            pos=pos,
+            times=times,
+            channels=channels,
+            channel_ids=channel_ids,
+            slices=slices,
+        )
 
         # Write global metadata to dest folder
         global_meta_filename = os.path.join(

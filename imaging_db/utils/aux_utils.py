@@ -31,7 +31,7 @@ def parse_ml_name(file_name):
     naming convention:
     "[plate ID]_[stack_nbr]_[protein name]_PyProcessed.tif”
     And they would like to include plate ID, stack number, and protein name in their
-    global metadata.
+    global metadata. Use the first three parts of file name.
 
     :param str file_name: File name or path
     :return dict meta_json: Global metadata
@@ -49,6 +49,6 @@ def parse_ml_name(file_name):
         raise
     meta_json = {"plate_id": str_list[0],
                  "stack_nbr": stack_nbr,
-                 "protein_name": str_list[-2]}
+                 "protein_name": str_list[2]}
 
     return meta_json

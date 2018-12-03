@@ -103,7 +103,7 @@ def upload_data_and_update_db(args):
         else:
             # Set default to ome_tiff
             frames_format = 'ome_tiff'
-        assert frames_format in {'ome_tiff', 'tif_folder', 'tif_id'}, \
+        assert frames_format in {'ome_tiff', 'ome_tif', 'tiff', 'tif_folder', 'tif_id'}, \
             ("frames_format should be 'ome_tiff', 'tif_folder' or 'tif_id'",
              "not {}".format(frames_format))
         class_dict = {'ome_tiff': 'OmeTiffSplitter',
@@ -111,9 +111,14 @@ def upload_data_and_update_db(args):
                       'tif_id': 'TifIDSplitter',
                       'tiff': 'OmeTiffSplitter',
                       'ome_tif': 'OmeTiffSplitter'}
+        module_dict = {'ome_tiff': 'images.ometif_splitter',
+                      'tif_folder': 'images.tiffolder_splitter',
+                      'tif_id': 'images.tif_id_splitter',
+                      'tiff': 'images.ometif_splitter',
+                      'ome_tif': 'images.ometif_splitter'}
         # Dynamically import class
         splitter_class = aux_utils.import_class(
-            'images',
+            module_dict[frames_format],
             class_dict[frames_format],
         )
 
@@ -131,7 +136,7 @@ def upload_data_and_update_db(args):
         except AssertionError as e:
             print("Invalid ID:", e)
 
-        # Instantiate S3 uploader
+        # Get S3 directory based on upload type
         if upload_type == "frames":
             s3_dir = "/".join([FRAME_FOLDER_NAME, dataset_serial])
         else:
@@ -149,6 +154,15 @@ def upload_data_and_update_db(args):
         # Make sure dataset is not already in database
         if not args.override:
             db_inst.assert_unique_id()
+        # Check for parent dataset
+        parent_dataset_id = 'None'
+        if 'parent_dataset_id' in row:
+            parent_dataset_id = row.parent_dataset_id
+        # Check for dataset description
+        description = None
+        if 'description' in row:
+            if row.description == row.description:
+                description = row.description
 
         if upload_type == "frames":
             # Instantiate splitter class
@@ -160,28 +174,27 @@ def upload_data_and_update_db(args):
             )
             # Get kwargs if any
             kwargs = {}
-            if row.frames_format == "ome_tiff":
-                positions = None
-                if 'positions' in config_json:
-                    positions = config_json['positions']
-                kwargs['positions'] = positions
+            if 'positions' in row:
+                positions = row['positions']
+                if not pd.isna(positions):
+                    kwargs['positions'] = positions
+            if 'meta_schema' in config_json:
                 kwargs['meta_schema'] = config_json['meta_schema']
-                filename_parser = None
-                if 'filename_parser' in config_json:
-                    filename_parser = config_json['filename_parser']
-                kwargs['filename_parser'] = filename_parser
+            if 'filename_parser' in config_json:
+                filename_parser = config_json['filename_parser']
+            kwargs['filename_parser'] = filename_parser
             # Extract metadata and split file into frames
             frames_inst.get_frames_and_metadata(**kwargs)
             # Add frames metadata to database
             try:
                 db_inst.insert_frames(
-                    description=row.description,
+                    description=description,
                     frames_meta=frames_inst.get_frames_meta(),
                     frames_json_meta=frames_inst.get_frames_json(),
                     global_meta=frames_inst.get_global_meta(),
                     global_json_meta=frames_inst.get_global_json(),
                     microscope=microscope,
-                    parent_dataset=row.parent_dataset_id,
+                    parent_dataset=parent_dataset_id,
                 )
 
             except AssertionError as e:
@@ -206,7 +219,7 @@ def upload_data_and_update_db(args):
             global_json = {"file_origin": row.file_name}
             try:
                 db_inst.insert_file(
-                    description=row.description,
+                    description=description,
                     s3_dir=s3_dir,
                     global_json_meta=global_json,
                     microscope=microscope,

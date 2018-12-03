@@ -7,6 +7,7 @@ from tqdm import tqdm
 
 import imaging_db.images.file_splitter as file_splitter
 import imaging_db.metadata.json_validator as json_validator
+import imaging_db.utils.meta_utils as meta_utils
 
 
 class OmeTiffSplitter(file_splitter.FileSplitter):
@@ -62,7 +63,7 @@ class OmeTiffSplitter(file_splitter.FileSplitter):
         # Convert frames to numpy stack and collect metadata
         # Separate structured metadata (with known fields)
         # from unstructured, the latter goes into frames_json
-        frames_meta = file_splitter.make_dataframe(nbr_frames=nbr_frames)
+        frames_meta = meta_utils.make_dataframe(nbr_frames=nbr_frames)
         # Pandas doesn't really support inserting dicts into dataframes,
         # so micromanager metadata goes into a separate list
         for i in range(nbr_frames):
@@ -76,8 +77,8 @@ class OmeTiffSplitter(file_splitter.FileSplitter):
             )
             self.frames_json.append(json_i)
             # Add required metadata fields to data frame
-            meta_names = file_splitter.META_NAMES
-            df_names = file_splitter.DF_NAMES
+            meta_names = meta_utils.META_NAMES
+            df_names = meta_utils.DF_NAMES
             for meta_name, df_name in zip(meta_names, df_names):
                 if meta_name in meta_i.keys():
                     frames_meta.loc[i, df_name] = meta_i[meta_name]
@@ -110,7 +111,7 @@ class OmeTiffSplitter(file_splitter.FileSplitter):
             "No positions correspond with IJMetadata PositionList"
         return file_paths
 
-    def get_frames_and_metadata(self, schema_filename, positions):
+    def get_frames_and_metadata(self, schema_filename, positions=None):
         """
         Reads ome.tiff file into memory and separates image frames and metadata.
         Workaround in case I need to read ome-xml:
@@ -120,8 +121,10 @@ class OmeTiffSplitter(file_splitter.FileSplitter):
         string, and it's only present in the first frame.
 
         :param str schema_filename: Gull path to metadata json schema file
+        :param [None, list of ints] positions: Position files to upload.
+            If None,
         """
-        if pd.isna(positions):
+        if isinstance(positions, type(None)):
             positions = []
         if os.path.isfile(self.data_path):
             # Run through processing only once
@@ -152,7 +155,7 @@ class OmeTiffSplitter(file_splitter.FileSplitter):
                 positions=positions,
                 glob_paths=file_paths,
             )
-        self.frames_meta = file_splitter.make_dataframe(nbr_frames=None)
+        self.frames_meta = meta_utils.make_dataframe(nbr_frames=None)
         self.frames_json = []
 
         pos_prog_bar = tqdm(file_paths, desc='Position')

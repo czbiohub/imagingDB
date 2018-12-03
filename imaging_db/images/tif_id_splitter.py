@@ -4,6 +4,8 @@ import os
 import tifffile
 
 import imaging_db.images.file_splitter as file_splitter
+import imaging_db.utils.aux_utils as aux_utils
+import imaging_db.utils.meta_utils as meta_utils
 
 
 class TifIDSplitter(file_splitter.FileSplitter):
@@ -69,12 +71,21 @@ class TifIDSplitter(file_splitter.FileSplitter):
                 indices['nbr_positions'] = int(s.split("=")[1])
         return indices
 
-    def get_frames_and_metadata(self):
+    def get_frames_and_metadata(self, filename_parser=None):
         """
-        reads tif videos into memory and separates image frames and metadata.
-        It assumes channel and frame info is in the ImageDescription tag
-        It also assumes order aquired is channel followed by frames since it's
-        a time series.
+        Reads tif files into memory and separates image frames and metadata.
+        Use this class if no MicroManagerMetadata tag is present, but you
+        have an ImageDescription tag.
+        It assumes that if there are any information number of channels,
+        slices, timepoints or positions, the info is embedded as a string in
+        the ImageDescription tag of the first frame.
+        It assumes the acquisition order is:
+         1) channels, 2) slices, 3) positions, 4) frames.
+        There is no way of validating the order because only the number
+        of each is specified, so use at your own risk.
+
+        :param str filename_parser: Optional function name that will
+            generate global json metadata from file name.
         """
         assert os.path.isfile(self.data_path), \
             "File doesn't exist: {}".format(self.data_path)
@@ -84,9 +95,8 @@ class TifIDSplitter(file_splitter.FileSplitter):
         page = frames.pages[0]
         nbr_frames = len(frames.pages)
         float2uint = self.set_frame_info(page)
-
         # Create image stack with image bit depth 16 or 8
-        self.im_stack = np.empty((self.fframe_shape[0],
+        self.im_stack = np.empty((self.frame_shape[0],
                                   self.frame_shape[1],
                                   self.im_colors,
                                   nbr_frames),
@@ -96,10 +106,16 @@ class TifIDSplitter(file_splitter.FileSplitter):
         indices = self._get_params_from_str(
             page.tags["ImageDescription"].value,
         )
-        self.global_json = {"file_origin": self.data_path}
+        # Get global json metadata
+        if filename_parser is not None:
+            parse_func = getattr(aux_utils, filename_parser)
+            self.global_json = parse_func(self.data_path)
+        else:
+            self.global_json = {}
+        self.global_json["file_origin"] = self.data_path
 
         # Convert frames to numpy stack and collect metadata
-        self.frames_meta = file_splitter.make_dataframe(nbr_frames=nbr_frames)
+        self.frames_meta = meta_utils.make_dataframe(nbr_frames=nbr_frames)
         self.frames_json = []
         # Loop over all the frames to get data and metadata
         variable_iterator = itertools.product(
@@ -108,9 +124,15 @@ class TifIDSplitter(file_splitter.FileSplitter):
             range(indices['nbr_slices']),
             range(indices['nbr_channels']),
         )
-        for i, (time_idx, channel_idx) in enumerate(variable_iterator):
+        for i, (time_idx, pos_idx, slice_idx, channel_idx) in \
+                enumerate(variable_iterator):
             page = frames.pages[i]
-            im = page.asarray()
+            try:
+                im = page.asarray()
+            except ValueError as e:
+                print("Can't read page ", i, self.data_path)
+                raise e
+
             if float2uint:
                 assert im.max() < 65536, "Im > 16 bit, max: {}".format(im.max())
                 im = im.astype(np.uint16)
@@ -121,15 +143,17 @@ class TifIDSplitter(file_splitter.FileSplitter):
             # Get all frame specific metadata
             dict_i = {}
             for t in tiftags.keys():
-                dict_i[t] = tiftags[t].value
+                # IJMeta often contain an ndarray LUT which is not serializable
+                if t != 'IJMetadata':
+                    dict_i[t] = tiftags[t].value
             self.frames_json.append(dict_i)
 
-            meta_row = dict.fromkeys(file_splitter.DF_NAMES)
+            meta_row = dict.fromkeys(meta_utils.DF_NAMES)
             meta_row["channel_name"] = None
             meta_row["channel_idx"] = channel_idx
             meta_row["time_idx"] = time_idx
-            meta_row["pos_idx"] = 0
-            meta_row["slice_idx"] = 0
+            meta_row["pos_idx"] = pos_idx
+            meta_row["slice_idx"] = slice_idx
             meta_row["file_name"] = self._get_imname(meta_row)
             self.frames_meta.loc[i] = meta_row
 
