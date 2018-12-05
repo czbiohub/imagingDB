@@ -305,7 +305,6 @@ class DatabaseOperations:
                       pos='all',
                       times='all',
                       channels='all',
-                      channel_ids='all',
                       slices='all'):
         """
         Get specific slices of a set of Frames
@@ -316,13 +315,10 @@ class DatabaseOperations:
         :param [str, tuple(int)] times: a tuple containing time indices
                         to be fetched use 'all' to get all times.
         :param [str, tuple] channels: a tuple containing channels
-                        (use channel names (e.g., 'Cy3').) to be fetched.
-        :param [str, tuple] channel_ids: a tuple containing channel indices.
-                        (integers) to be fetched. Use 'all' to get all channels
-                        indices. This call is mutually exclusive with 'channels'.
+                        (use channel names (e.g., 'Cy3') or integer indices)
+                        to be fetched.
         :param [str, tuple] slices: a tuple containing slice indices to
                         be fetched. Use 'all' to get all slices.
-
         :return Query sliced_frames: query that yields the requested frames
         :raises AssertionError: If illegal indices are given
         :raises ValueError: If an illegal type is given
@@ -332,18 +328,22 @@ class DatabaseOperations:
         sliced_frames = frames
 
         # Filter by channel
-        if channels == 'all' and channel_ids == 'all':
+        if channels == 'all':
             pass
         elif type(channels) is tuple:
-            assert channel_ids == 'all', \
-                "You can't specify both channel names and channel indices."
-            sliced_frames = sliced_frames.filter(
-                Frames.channel_name.in_(channels))
-        elif type(channel_ids) is tuple:
-            assert channels == 'all', \
-                "You can't specify both channel names and channel indices."
-            sliced_frames = sliced_frames.filter(
-                Frames.channel_idx.in_(channel_ids))
+            if np.all([isinstance(c, str) for c in channels]):
+                # Query channel names
+                sliced_frames = sliced_frames.filter(
+                    Frames.channel_name.in_(channels),
+                )
+            elif np.all([isinstance(c, int) for c in channels]):
+                # Query channel indices
+                sliced_frames = sliced_frames.filter(
+                    Frames.channel_idx.in_(channels),
+                )
+            else:
+                raise ValueError('channels tuple must be either all str or',
+                                 'int, not {}'.format(channels))
         else:
             raise ValueError('Invalid channel query')
 
@@ -361,7 +361,7 @@ class DatabaseOperations:
         elif type(times) is tuple:
             sliced_frames = sliced_frames.filter(Frames.time_idx.in_(times))
         else:
-            raise ValueError('Invalid slice query')
+            raise ValueError('Invalid time query')
 
         # Filter by position
         if pos == 'all':
@@ -424,7 +424,6 @@ class DatabaseOperations:
                         pos='all',
                         times='all',
                         channels='all',
-                        channel_ids='all',
                         slices='all'):
         """
         Get information for all frames in dataset associated with unique
@@ -435,11 +434,8 @@ class DatabaseOperations:
         :param [str, tuple] times: a tuple containing time indices to be
                         fetched use 'all' to get all times.
         :param [str, tuple] channels: a tuple containing channels (use
-                                    channel names (e.g., 'Cy3').) to be
-                                    fetched use 'all' to get all channels.
-        :param [str, tuple] channel_ids: a tuple containing channel indices
-                                    (integers) to be fetched. Use 'all' to
-                                    get all channels.
+                        channel names e.g., 'Cy3', or integer indice) to be
+                        fetched. Use 'all' to get all channels.
         :param [str, tuple] slices: a tuple containing slice indices
                         to be fetched use 'all' to get all channels.
 
@@ -467,7 +463,6 @@ class DatabaseOperations:
                 pos=pos,
                 times=times,
                 channels=channels,
-                channel_ids=channel_ids,
                 slices=slices,
             )
 

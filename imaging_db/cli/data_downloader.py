@@ -35,19 +35,11 @@ def parse_args():
         nargs='+',
         help="Tuple containing time indices to download",
     )
-    # You can specify channel indices or names, not both
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument(
+    parser.add_argument(
         '-c', '--channels',
         type=str,
         nargs='+',
-        help="Tuple containing the channel names to download",
-    )
-    group.add_argument(
-        '--channel_ids',
-        type=str,
-        nargs='+',
-        help="Tuple containing the channel indices to download",
+        help="Tuple containing the channel names or indices to download",
     )
     parser.add_argument(
         '-z', '--slices',
@@ -158,12 +150,13 @@ def download_data(args):
         if args.channels is None:
             channels = 'all'
         else:
-            channels = tuple(args.channels)
-
-        if args.channel_ids is None:
-            channel_ids = 'all'
-        else:
-            channel_ids = tuple(args.channel_ids)
+            # If channels can be converted to ints, they're indices
+            try:
+                channels = [int(c) for c in args.channels]
+            except ValueError:
+                # Channels are names, not indices
+                channels = args.channels
+            channels = tuple(channels)
 
         if args.slices is None:
             slices = 'all'
@@ -175,7 +168,6 @@ def download_data(args):
             pos=pos,
             times=times,
             channels=channels,
-            channel_ids=channel_ids,
             slices=slices,
         )
 

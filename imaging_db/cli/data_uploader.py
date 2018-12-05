@@ -149,8 +149,7 @@ def upload_data_and_update_db(args):
                 dataset_serial=dataset_serial,
             )
         except Exception as e:
-            print(e)
-            raise
+            raise e
         # Make sure dataset is not already in database
         if not args.override:
             db_inst.assert_unique_id()

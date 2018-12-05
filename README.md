@@ -77,8 +77,8 @@ The data_downloader CLI takes the following command line inputs:
 * **no-metadata:** Downloads image data only
 * **no-download:** Downloads metadata only
 * **download:** (default True) For Frames, there's the option of only retrieving the metadata files  
-* **c, channels:** [tuple] Download only specified channel names (optional)
-* **channel_ids:** [tuple] Download only specified channel indices (optional)
+* **c, channels:** [tuple] Download only specified channel names/indices if tuple contains
+ strings/integers (optional)
 * **z, slices:** [tuple] Download only specified slice indices (optional)
 * **t, times:** [tuple] Download only specified time indices (optional)
 * **p, positions:** [tuple] Download only specified position indices (optional)
@@ -154,7 +154,8 @@ nosetests imaging_db/filestorage/s3_storage_tests.py
 
 ## Authors
 
-* **Jenny Folkesson** - *Initial work* - jenny.folkesson@czbiohub.org [GitHub](https://github.com/jennyfolkesson)
+* **Jenny Folkesson** - *Original author* - jenny.folkesson@czbiohub.org [GitHub](https://github.com/jennyfolkesson)
+* **Kevin Yamauchi** - *Contributor* - kevin.yamauchi@czbiohub.org [GitHub](https://github.com/kevinyamauchi)
 
 ## License
 

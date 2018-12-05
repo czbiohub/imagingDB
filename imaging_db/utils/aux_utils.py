@@ -46,7 +46,7 @@ def parse_ml_name(file_name):
         stack_nbr = int(str_list[1])
     except ValueError as e:
         print('Stack number {} should be an int'.format(str_list[1]))
-        raise
+        raise e
     meta_json = {"plate_id": str_list[0],
                  "stack_nbr": stack_nbr,
                  "protein_name": str_list[2]}
