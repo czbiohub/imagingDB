@@ -12,7 +12,7 @@ def test_parse_ml_name():
 
 
 def test_parse_ml_name_long_protein():
-    file_name = 'p6A1_5_Jin_G4_FBXO9_PyProcessed.tif'
+    file_name = 'p6A1_5_FBXO9_Jin_G4_PyProcessed.tif'
     meta_json = aux_utils.parse_ml_name(file_name)
     nose.tools.assert_equal(meta_json['plate_id'], 'p6A1')
     nose.tools.assert_equal(meta_json['stack_nbr'], 5)
