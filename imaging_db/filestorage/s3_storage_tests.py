@@ -9,8 +9,8 @@ from testfixtures import TempDirectory
 import unittest
 
 import imaging_db.filestorage.s3_storage as s3_storage
-import imaging_db.images.file_splitter as file_splitter
 import imaging_db.utils.image_utils as im_utils
+import imaging_db.utils.meta_utils as meta_utils
 
 
 class TestDataStorage(unittest.TestCase):
@@ -147,7 +147,7 @@ class TestDataStorage(unittest.TestCase):
             "nbr_timepoints": 1,
             "nbr_positions": 1,
         }
-        frames_meta = file_splitter.make_dataframe(
+        frames_meta = meta_utils.make_dataframe(
             nbr_frames=global_meta["nbr_frames"],
         )
         frames_meta.loc[0] = [0, 0, 0, "A", "im1.png", 0]

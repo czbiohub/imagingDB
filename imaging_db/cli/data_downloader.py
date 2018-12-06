@@ -39,7 +39,7 @@ def parse_args():
         '-c', '--channels',
         type=str,
         nargs='+',
-        help="Tuple containing the channels to download",
+        help="Tuple containing the channel names or indices to download",
     )
     parser.add_argument(
         '-z', '--slices',
@@ -150,7 +150,13 @@ def download_data(args):
         if args.channels is None:
             channels = 'all'
         else:
-            channels = tuple(args.channels)
+            # If channels can be converted to ints, they're indices
+            try:
+                channels = [int(c) for c in args.channels]
+            except ValueError:
+                # Channels are names, not indices
+                channels = args.channels
+            channels = tuple(channels)
 
         if args.slices is None:
             slices = 'all'
@@ -159,7 +165,11 @@ def download_data(args):
 
         # Get the metadata from the requested frames
         global_meta, frames_meta = db_inst.get_frames_meta(
-            pos=pos, times=times, channels=channels, slices=slices)
+            pos=pos,
+            times=times,
+            channels=channels,
+            slices=slices,
+        )
 
         # Write global metadata to dest folder
         global_meta_filename = os.path.join(

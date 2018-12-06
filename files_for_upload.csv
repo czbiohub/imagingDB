@@ -1,10 +1,2 @@
-dataset_id,file_name,description,upload_type,frames_format,meta_schema,microscope,parent_dataset_id,positions
-ML-2018-04-05-08-55-00-0001,/Users/jenny.folkesson/Data/microscopy/BlankSlide_DAPI_TxRed_BF_Phase.lif,This is a blank slide for testing,file,,None,,None,
-ISP-2018-06-08-15-45-00-0001,/Users/jenny.folkesson/Data/microscopy/ISP_293T_TFRC_sgRNA2_20180601_1_MMStack_Pos1.ome.tif,This is what I assume is a typical ome-tif file,frames,ome_tiff,/Users/jenny.folkesson/Code/imagingDB/metadata_schema.json,None,None,
-ML-2018-04-05-08-55-00-0002,/Users/jenny.folkesson/Data/microscopy/BlankSlide_DAPI_TxRed_BF_Phase.lif,I'm pretending this is a child of the first lif file,file,,None,None,ML-2018-04-05-08-55-00-0001,
-ISP-2018-06-08-00-00-00-0002,/Users/jenny.folkesson/Data/microscopy/ISP_200nm_BeadStack_40x_1-3NA_1-0x_20180608_2_MMStack_Pos0.ome.tif,Last test file from Kevin,frames,ome_tiff,/Users/jenny.folkesson/Code/imagingDB/metadata_schema.json,,,
-ISP-2018-06-01-00-00-00-0002,/Users/jenny.folkesson/Data/microscopy/ISP_293T_TFRC_blank_20180601_1_MMStack_Pos2.ome.tif,New test ome tif,frames,ome_tiff,/Users/jenny.folkesson/Code/imagingDB/metadata_schema.json,,,
-ISP-2018-06-01-00-00-00-0003,/Users/jenny.folkesson/Data/microscopy/ISP_293T_TFRC_blank_20180601_1_MMStack_Pos2.ome.tif,Same as 002,frames,ome_tiff,/Users/jenny.folkesson/Code/imagingDB/metadata_schema.json,,ISP-2018-06-01-00-00-00-0002,
-SMS-2018-07-03-18-35-00-0010,/Users/jenny.folkesson/Data/SMS_2018_0703_1835_1_BG_2018_0703_1829_1,Only 10 frames from each channel at position 0 from larger background corrected dataset,frames,tif_folder,,Birefringence,,
-ISP-2018-01-01-00-00-00-0001,/Users/jenny.folkesson/Data/microscopy/ometif_folder,Testing uploading several but not all position files from the same folder,frames,ome_tiff,/Users/jenny.folkesson/Code/imagingDB/metadata_schema.json,None,,"[0, 1]"
-ISP-2018-01-01-00-00-00-0002,/Users/jenny.folkesson/Data/microscopy/ometif_folder,Testing uploading all position files from the same folder,frames,ome_tiff,/Users/jenny.folkesson/Code/imagingDB/metadata_schema.json,,ISP-2018-01-01-00-00-00-0001,
+dataset_id,file_name,description,parent_dataset_id,positions
+ML-2018-11-07-09-35-54-0010,/Volumes/MicroscopyData/ML_group/Plate_Microscopy/mNG96wp6/PublicationQuality_IJClean/A1_1_CTRL1_PyProcessed_IJClean.tif,Publication quality Ijclean data,None,

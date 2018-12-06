@@ -5,6 +5,7 @@ import tifffile
 
 import imaging_db.images.file_splitter as file_splitter
 import imaging_db.metadata.json_validator as json_validator
+import imaging_db.utils.meta_utils as meta_utils
 
 
 class TifFolderSplitter(file_splitter.FileSplitter):
@@ -45,7 +46,7 @@ class TifFolderSplitter(file_splitter.FileSplitter):
         """
         im_name = os.path.basename(im_path)[:-4]
         str_split = im_name.split("_")[1:]
-        meta_row = dict.fromkeys(file_splitter.DF_NAMES)
+        meta_row = dict.fromkeys(meta_utils.DF_NAMES)
         for s in str_split:
             # This is assuming no channel is named e.g. txxx
             if s in channel_names:
@@ -95,7 +96,7 @@ class TifFolderSplitter(file_splitter.FileSplitter):
                                   self.im_colors,
                                   1),
                                  dtype=self.bit_depth)
-        self.frames_meta = file_splitter.make_dataframe(nbr_frames=nbr_frames)
+        self.frames_meta = meta_utils.make_dataframe(nbr_frames=nbr_frames)
         self.frames_json = []
         # Loop over all the frames to get data and metadata
         for i, frame_path in enumerate(frame_paths):

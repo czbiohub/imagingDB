@@ -1,0 +1,6 @@
+{
+    "upload_type": "frames",
+    "frames_format": "tif_id",
+    "microscope": "Leica microscope CAN bus adapter",
+    "filename_parser": "parse_ml_name"
+}

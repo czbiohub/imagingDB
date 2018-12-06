@@ -30,25 +30,58 @@ the database. Files will be written to the 'raw_files' folder
 in the S3 buckets, and frames will be written to 'raw_frames'.
 
 The data uploader takes:
- * a csv file containing file information, please see the
+ * **csv:** a csv file containing file information, please see the
  _files_for_upload.csv_ in this repository for required fields and example values.
-* a json file containing database login credentials (see db_credentials.json)
+ The csv file should contain the following columns:
+    * _dataset_id:_ The unique dataset identifier (required)
+    * _file_name:_ Full path to the file/directory to upload (required)
+    * _description:_ Description of the dataset (string, optional)
+    * _positions:_ [list of ints] Positions in file directory that belong to the same
+    dataset ID. Optional for ome_tif uploads only.
+* **login:** a json file containing database login credentials (see db_credentials.json)
+    * _drivername_
+    * _username_
+    * _password_
+    * _host_
+    * _port_
+    * _dbname_
+* **config:** a json config file containing upload settings (see example in config.json)
+    * _upload_type:_ 'frames' if you want to split file into frames, or 'format'
+    if you want to upload a file uninspected. (required)
+    * _frames_format:_ If uploading frames, specify what upload type. Options
+    are: 'ome_tiff' (needs MicroManagerMetadata tag for each frame for metadata),
+     'tif_folder' (when each file is already an individual frame),
+     'tif_id' (needs ImageDescription tag in first frame page for metadata)
+    * _microscope:_ [string] Which microscope was used for image acquisition (optional)
+    * _filename_parser:_ If there's metadata information embedded in file name,
+    specify which function (in aux_utils) that can parse the name for you.
+    Current options are: 'parse_ml_name' (optional)
+    * _meta_schema:_ If doing a ome_tiff opload, you can specify a metadata 
+    schema with required fields. See example in metadata_schema.json
+    (optional for ome_tiff uploads).
 
 If you want to validate metadata for each frame, you can specify a JSON schema file in the
 _meta_schema_ field of the csv. This metadata will be evaluated for each
 frame of the file. See metadata_schema.json for an example schema.
 
 ```buildoutcfg
-python imaging_db/cli/data_uploader.py --csv files_for_upload.csv --login db_credentials.json
+python imaging_db/cli/data_uploader.py --csv files_for_upload.csv --login db_credentials.json --config config.json
 ```
 
 The data_downloader CLI takes the following command line inputs: 
-* _login:_ a JSON file with DB login credentials
-* _dest:_ a destination folder where the data will be downloaded
-* _id:_ a unique dataset identifier
-* _metadata:_ (default True) For files split to frames only. Writes metadata
-            global metadata in json, local for each frame in csv
-* _download:_ (default True) For Frames, there's the option of only retrieving the metadata files  
+* **login:** a JSON file with DB login credentials
+* **dest:** a destination folder where the data will be downloaded
+* **id:** a unique dataset identifier
+* **metadata:** (default True) For files split to frames only. Writes metadata
+            global metadata in json, local for each frame in csv.
+* **no-metadata:** Downloads image data only
+* **no-download:** Downloads metadata only
+* **download:** (default True) For Frames, there's the option of only retrieving the metadata files  
+* **c, channels:** [tuple] Download only specified channel names/indices if tuple contains
+ strings/integers (optional)
+* **z, slices:** [tuple] Download only specified slice indices (optional)
+* **t, times:** [tuple] Download only specified time indices (optional)
+* **p, positions:** [tuple] Download only specified position indices (optional)
 
 ```buildoutcfg
 python imaging_db/cli/data_downloader.py --id ID-2018-04-05-00-00-00-0001 --dest /My/local/folder --login db_credentials.json
@@ -121,7 +154,8 @@ nosetests imaging_db/filestorage/s3_storage_tests.py
 
 ## Authors
 
-* **Jenny Folkesson** - *Initial work* - jenny.folkesson@czbiohub.org [GitHub](https://github.com/jennyfolkesson)
+* **Jenny Folkesson** - *Original author* - jenny.folkesson@czbiohub.org [GitHub](https://github.com/jennyfolkesson)
+* **Kevin Yamauchi** - *Contributor* - kevin.yamauchi@czbiohub.org [GitHub](https://github.com/kevinyamauchi)
 
 ## License
 

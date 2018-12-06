@@ -1,17 +1,15 @@
 from contextlib import contextmanager
+import numpy as np
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
-import imaging_db.images.file_splitter as file_splitter
 import imaging_db.metadata.json_validator as json_validator
 from imaging_db.database.base import Base
 from imaging_db.database.dataset import DataSet
 from imaging_db.database.file_global import FileGlobal
 from imaging_db.database.frames import Frames
 from imaging_db.database.frames_global import FramesGlobal
-
-import numpy as np
-
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+import imaging_db.utils.meta_utils as meta_utils
 
 
 @contextmanager
@@ -122,8 +120,8 @@ class DatabaseOperations:
         if isinstance(parent_dataset, str):
             if parent_dataset.lower() == "none" or len(parent_dataset) == 0:
                 parent_dataset = None
-        else:
-            if np.isnan(parent_dataset):
+        # Check for nan regardless of type
+        elif parent_dataset != parent_dataset:
                 parent_dataset = None
         if parent_dataset is not None:
             try:
@@ -302,38 +300,29 @@ class DatabaseOperations:
 
                 return s3_dir, file_names
 
-    def _slice_frames(
-            self, frames, pos='all', times='all', channels='all',
-            slices='all'):
+    def _slice_frames(self,
+                      frames,
+                      pos='all',
+                      times='all',
+                      channels='all',
+                      slices='all'):
         """
         Get specific slices of a set of Frames
 
         :param Query frames: all of the frames to be sliced
         :param [str, tuple(int)] pos: a tuple containing position indices
                         to be fetched use 'all' to get all positions.
-                        If illegal indices are given, an AssertionError
-                        will be raised. If an illegal type is given, a
-                        ValueError will be given.
         :param [str, tuple(int)] times: a tuple containing time indices
                         to be fetched use 'all' to get all times.
-                        If illegal indices are given, an AssertionError
-                        will be raised. If an illegal type is given,
-                        a ValueError will be given.
         :param [str, tuple] channels: a tuple containing channels
-                                    (use channel names (e.g., 'Cy3').)
-                                    to be fetched use 'all' to get all
-                                    channels. If illegal indices are
-                                    given, an AssertionErrorwill be
-                                    raised. If an illegal type is given,
-                                    a ValueError will be given.
+                        (use channel names (e.g., 'Cy3') or integer indices)
+                        to be fetched.
         :param [str, tuple] slices: a tuple containing slice indices to
-                                    be fetched use 'all' to get all
-                                    channels. If illegal indices are given,
-                                    an AssertionErrorwill be raised.
-                                    If an illegal type is given, a
-                                    ValueError will be given.
-
+                        be fetched. Use 'all' to get all slices.
         :return Query sliced_frames: query that yields the requested frames
+        :raises AssertionError: If illegal indices are given
+        :raises ValueError: If an illegal type is given
+        :raises AssertionError: If both channels and channel_ids are specified.
         """
 
         sliced_frames = frames
@@ -342,9 +331,19 @@ class DatabaseOperations:
         if channels == 'all':
             pass
         elif type(channels) is tuple:
-            sliced_frames = sliced_frames.filter(
-                Frames.channel_name.in_(channels))
-
+            if np.all([isinstance(c, str) for c in channels]):
+                # Query channel names
+                sliced_frames = sliced_frames.filter(
+                    Frames.channel_name.in_(channels),
+                )
+            elif np.all([isinstance(c, int) for c in channels]):
+                # Query channel indices
+                sliced_frames = sliced_frames.filter(
+                    Frames.channel_idx.in_(channels),
+                )
+            else:
+                raise ValueError('channels tuple must be either all str or',
+                                 'int, not {}'.format(channels))
         else:
             raise ValueError('Invalid channel query')
 
@@ -359,15 +358,15 @@ class DatabaseOperations:
         # Filter by time
         if times == 'all':
             pass
-        elif type(slices) is tuple:
+        elif type(times) is tuple:
             sliced_frames = sliced_frames.filter(Frames.time_idx.in_(times))
         else:
-            raise ValueError('Invalid slice query')
+            raise ValueError('Invalid time query')
 
         # Filter by position
         if pos == 'all':
             pass
-        elif type(slices) is tuple:
+        elif type(pos) is tuple:
             sliced_frames = sliced_frames.filter(Frames.pos_idx.in_(pos))
         else:
             raise ValueError('Invalid slice query')
@@ -402,10 +401,12 @@ class DatabaseOperations:
             "nbr_positions": frames[0].frames_global.nbr_positions,
             "bit_depth": frames[0].frames_global.bit_depth,
         }
-        file_splitter.validate_global_meta(global_meta)
+        meta_utils.validate_global_meta(global_meta)
+        # Add global JSON metadata
+        global_meta["metadata_json"] = frames[0].frames_global.metadata_json
 
         # Metadata that will be returned from the DB for each frame
-        frames_meta = file_splitter.make_dataframe(
+        frames_meta = meta_utils.make_dataframe(
             nbr_frames=frames.count(),
         )
         for i, f in enumerate(frames):
@@ -419,9 +420,11 @@ class DatabaseOperations:
             ]
         return global_meta, frames_meta
 
-    def get_frames_meta(
-        self, pos='all', times='all', channels='all',
-            slices='all'):
+    def get_frames_meta(self,
+                        pos='all',
+                        times='all',
+                        channels='all',
+                        slices='all'):
         """
         Get information for all frames in dataset associated with unique
         project identifier.
@@ -431,8 +434,8 @@ class DatabaseOperations:
         :param [str, tuple] times: a tuple containing time indices to be
                         fetched use 'all' to get all times.
         :param [str, tuple] channels: a tuple containing channels (use
-                                    channel names (e.g., 'Cy3').) to be
-                                    fetched use 'all' to get all channels.
+                        channel names e.g., 'Cy3', or integer indice) to be
+                        fetched. Use 'all' to get all channels.
         :param [str, tuple] slices: a tuple containing slice indices
                         to be fetched use 'all' to get all channels.
 
@@ -456,8 +459,12 @@ class DatabaseOperations:
 
             # Get the specified slices
             sliced_frames = self._slice_frames(
-                    all_frames, pos=pos, times=times, channels=channels,
-                    slices=slices)
+                all_frames,
+                pos=pos,
+                times=times,
+                channels=channels,
+                slices=slices,
+            )
 
             # Get global and local metadata
             global_meta, frames_meta = self._get_meta_from_frames(
