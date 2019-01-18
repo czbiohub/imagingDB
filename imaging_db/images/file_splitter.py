@@ -69,6 +69,20 @@ class FileSplitter(metaclass=ABCMeta):
             "global_json has no values yet"
         return self.global_json
 
+    def generate_hash(self):
+        """
+        calculates the sha256 checksum for all image slices
+
+        """
+        assert self.frames_meta is not None and self.im_stack is not None, \
+            "frames_meta and im_stack must be set"
+
+        sha = []
+        for i in range(self.im_stack.shape[3]).:
+            sha.append(meta_utils.gen_sha256(self.im_stack[..., i]))
+
+        self.frames_meta['sha256'] = sha
+
     def get_frames_meta(self):
         """
         Checks if metadata is assigned and if so returns it
