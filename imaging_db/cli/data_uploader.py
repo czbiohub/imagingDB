@@ -10,6 +10,7 @@ import imaging_db.database.db_session as db_session
 import imaging_db.filestorage.s3_storage as s3_storage
 import imaging_db.metadata.json_validator as json_validator
 import imaging_db.utils.aux_utils as aux_utils
+import imaging_db.utils.meta_utils as meta_utils
 
 FILE_FOLDER_NAME = "raw_files"
 FRAME_FOLDER_NAME = "raw_frames"
@@ -184,6 +185,8 @@ def upload_data_and_update_db(args):
             kwargs['filename_parser'] = filename_parser
             # Extract metadata and split file into frames
             frames_inst.get_frames_and_metadata(**kwargs)
+            # Generate hash
+            frames_inst.generate_hash()
             # Add frames metadata to database
             try:
                 db_inst.insert_frames(
@@ -214,6 +217,8 @@ def upload_data_and_update_db(args):
             except AssertionError as e:
                 print("File {} already on S3, moving on to DB entry")
                 print(e)
+
+            sha = meta_utils.gen_sha256(row.file_name)
             # Add file entry to DB once I can get it tested
             global_json = {"file_origin": row.file_name}
             try:
@@ -223,6 +228,7 @@ def upload_data_and_update_db(args):
                     global_json_meta=global_json,
                     microscope=microscope,
                     parent_dataset=row.parent_dataset_id,
+                    sha256=sha,
                 )
                 print("File info for {} inserted in DB".format(dataset_serial))
             except AssertionError as e:
