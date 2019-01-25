@@ -120,7 +120,7 @@ class OmeTiffSplitter(file_splitter.FileSplitter):
         NOTE: It seems like the IJMetadata Info field is a dict converted into
         string, and it's only present in the first frame.
 
-        :param str schema_filename: Gull path to metadata json schema file
+        :param str schema_filename: Full path to metadata json schema file
         :param [None, list of ints] positions: Position files to upload.
             If None,
         """
@@ -161,7 +161,7 @@ class OmeTiffSplitter(file_splitter.FileSplitter):
         pos_prog_bar = tqdm(file_paths, desc='Position')
 
         for file_path in pos_prog_bar:
-            file_meta, im_stack = self.split_file(
+            file_meta, self.im_stack = self.split_file(
                 file_path,
                 schema_filename,
             )
@@ -172,7 +172,7 @@ class OmeTiffSplitter(file_splitter.FileSplitter):
             # Upload frames in file to S3
             self.upload_stack(
                 file_names=list(file_meta["file_name"]),
-                im_stack=im_stack,
+                im_stack=self.im_stack,
             )
         # Finally, set global metadata from frames_meta
         self.set_global_meta(nbr_frames=self.frames_meta.shape[0])

@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import hashlib
 
+CHUNK_SIZE = 4096
+
 
 # Required metadata fields - everything else goes into a json
 META_NAMES = ["ChannelIndex",
@@ -84,8 +86,8 @@ def gen_sha256(image):
     # If a file path is passed in, hash the file in 4kB chunks
     elif isinstance(image, str):
         with open(image,"rb") as im:
-            for byte_block in iter(lambda: im.read(4096),b""):
-                sha256_hash.update(byte_block)
+            for byte_block in iter(lambda: im.read(CHUNK_SIZE),b""):
+                sha.update(byte_block)
 
     else:
         raise TypeError('image must be a numpy ndarray (frame)',
