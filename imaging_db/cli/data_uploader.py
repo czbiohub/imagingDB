@@ -178,8 +178,8 @@ def upload_data_and_update_db(args):
                 positions = row['positions']
                 if not pd.isna(positions):
                     kwargs['positions'] = positions
-            if 'meta_schema' in config_json:
-                kwargs['meta_schema'] = config_json['meta_schema']
+            if 'schema_filename' in config_json:
+                kwargs['schema_filename'] = config_json['schema_filename']
             if 'filename_parser' in config_json:
                 filename_parser = config_json['filename_parser']
             kwargs['filename_parser'] = filename_parser

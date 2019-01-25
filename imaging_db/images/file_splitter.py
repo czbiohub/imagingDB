@@ -78,7 +78,7 @@ class FileSplitter(metaclass=ABCMeta):
             "frames_meta and im_stack must be set"
 
         sha = []
-        for i in range(self.im_stack.shape[3]).:
+        for i in range(self.im_stack.shape[3]):
             sha.append(meta_utils.gen_sha256(self.im_stack[..., i]))
 
         self.frames_meta['sha256'] = sha
