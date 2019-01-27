@@ -1,4 +1,8 @@
 import nose.tools
+from testfixtures import TempDirectory
+import tifffile
+import numpy as np
+from skimage import io
 
 import imaging_db.utils.meta_utils as meta_utils
 
@@ -42,6 +46,35 @@ def test_validate_global_meta():
     }
     meta_utils.validate_global_meta(global_meta)
 
+def test_gen_sha256_numpy():
+    expected_sha = 'd1b8118646637256b66ef034778f8d0add8d00436ad1ebb051ef09cf19dbf2d2'
+
+    # Temporary file with 6 frames, tifffile stores channels first
+    im = 50 * np.ones((6, 50, 50), dtype=np.uint16)
+
+    sha = meta_utils.gen_sha256(im)
+    nose.tools.assert_equal(expected_sha, sha)
+
+def test_gen_sha256_file():
+    expected_sha = 'bdc35af0bfecfd904194fe6b8df893048fa50d80615127e435553e6366c20596'
+
+    tempdir = TempDirectory()
+    temp_path = tempdir.path
+
+    # Temporary file with 6 frames, tifffile stores channels first
+    im = 50 * np.ones((50, 50), dtype=np.uint16)
+
+
+    # Save test tif file
+    file_path = os.path.join(temp_path, "A1_2_PROTEIN_test.png")
+    #tifffile.imsave(file_path,
+    #                im
+    #                )
+        
+    io.imsave(file_path, im)
+
+    sha = meta_utils.gen_sha256(file_path)
+    nose.tools.assert_equal(expected_sha, sha)
 
 @nose.tools.raises(AssertionError)
 def test_validate_global_meta_invalid():
@@ -58,7 +91,6 @@ def test_validate_global_meta_invalid():
         "nbr_positions": 9,
     }
     meta_utils.validate_global_meta(global_meta)
-
 
 @nose.tools.raises(AssertionError)
 def test_validate_global_meta_missing():
