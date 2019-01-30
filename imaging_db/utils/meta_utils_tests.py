@@ -2,7 +2,8 @@ import nose.tools
 from testfixtures import TempDirectory
 import tifffile
 import numpy as np
-from skimage import io
+import os
+import datetime
 
 import imaging_db.utils.meta_utils as meta_utils
 
@@ -56,22 +57,25 @@ def test_gen_sha256_numpy():
     nose.tools.assert_equal(expected_sha, sha)
 
 def test_gen_sha256_file():
-    expected_sha = 'bdc35af0bfecfd904194fe6b8df893048fa50d80615127e435553e6366c20596'
+    expected_sha = 'af87894cc23928df908b02bd94842d063a5c7aae9eb1bbc2bb5c9475d674bcba'
 
     tempdir = TempDirectory()
     temp_path = tempdir.path
 
     # Temporary file with 6 frames, tifffile stores channels first
-    im = 50 * np.ones((50, 50), dtype=np.uint16)
-
+    im = 50 * np.ones((6, 10, 15), dtype=np.uint16)
+    im[0, :5, 3:12] = 50000
+    im[2, :5, 3:12] = 40000
+    im[4, :5, 3:12] = 30000
+    
+    description = 'ImageJ=1.52e\nimages=6\nchannels=2\nslices=3\nmax=10411.0'
 
     # Save test tif file
-    file_path = os.path.join(temp_path, "A1_2_PROTEIN_test.png")
-    #tifffile.imsave(file_path,
-    #                im
-    #                )
-        
-    io.imsave(file_path, im)
+    file_path = os.path.join(temp_path, "A1_2_PROTEIN_test.tif")
+    tifffile.imsave(file=file_path,
+                    data=im,
+                    description=description,
+                    datetime=datetime.datetime(2019, 1, 1))
 
     sha = meta_utils.gen_sha256(file_path)
     nose.tools.assert_equal(expected_sha, sha)
@@ -98,3 +102,9 @@ def test_validate_global_meta_missing():
         "s3_dir": "dir_name",
     }
     meta_utils.validate_global_meta(global_meta)
+
+def tearDown(self):
+        """
+        Tear down temporary folder and files and stop S3 mock
+        """
+        TempDirectory.cleanup_all()
