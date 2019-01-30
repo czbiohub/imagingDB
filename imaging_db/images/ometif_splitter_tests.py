@@ -171,3 +171,12 @@ class TestOmeTiffSplitter(unittest.TestCase):
             positions=postions,
             glob_paths=file_paths,
         )
+
+    def test_generate_hash(self):
+        expected_hash = [
+            '1119b6f3616928f045e33cdc67eb6cf2bcf34fa6b49835d053016b70b1ff59d9',
+            '1119b6f3616928f045e33cdc67eb6cf2bcf34fa6b49835d053016b70b1ff59d9',
+        ]
+
+        sha = self.frames_inst.frames_meta.sha256.tolist()
+        nose.tools.assert_equal(expected_hash, sha)

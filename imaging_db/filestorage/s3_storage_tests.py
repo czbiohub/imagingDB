@@ -150,8 +150,14 @@ class TestDataStorage(unittest.TestCase):
         frames_meta = meta_utils.make_dataframe(
             nbr_frames=global_meta["nbr_frames"],
         )
-        frames_meta.loc[0] = [0, 0, 0, "A", "im1.png", 0]
-        frames_meta.loc[1] = [1, 0, 0, "B", "im2.png", 0]
+
+        nbr_frames = self.im_stack.shape[2]
+        sha = [None] * nbr_frames
+        for i in range(nbr_frames):
+            sha[i] = meta_utils.gen_sha256(self.im_stack[...,i])
+
+        frames_meta.loc[0] = [0, 0, 0, "A", "im1.png", 0, sha[0]]
+        frames_meta.loc[1] = [1, 0, 0, "B", "im2.png", 0, sha[1]]
         im_stack, dim_order = data_storage.get_stack_from_meta(
             global_meta,
             frames_meta,

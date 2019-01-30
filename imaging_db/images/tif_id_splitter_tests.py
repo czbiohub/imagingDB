@@ -102,3 +102,19 @@ class TestTifIDSplitter(unittest.TestCase):
             # Assert that contents are the same
             nose.tools.assert_equal(im.dtype, np.uint16)
             numpy.testing.assert_array_equal(im, self.im[i, ...])
+
+    def test_generate_hash(self):
+        expected_hash = [
+            '5aafc4b96e20644bc0d237b8ec52f1f592c28609f01c0eb9d1342a6b6266ae75',
+            '075aedba73ced5d4f1200f9304f5f1115bb83d05898c8d601e4b7a8a90a51754',
+            '0515c9e343701f9e2551f91ea51d1a7231941d4db028e929ed2d338eac48b5cb',
+            '075aedba73ced5d4f1200f9304f5f1115bb83d05898c8d601e4b7a8a90a51754',
+            '001fa77b7c20cd157e725defa454609f7e278303f8e59645479ab8fb1ad57330',
+            '075aedba73ced5d4f1200f9304f5f1115bb83d05898c8d601e4b7a8a90a51754',
+        ]
+
+        sha = self.frames_inst.frames_meta.sha256.tolist()
+
+        nose.tools.assert_equal(expected_hash, sha)
+
+
