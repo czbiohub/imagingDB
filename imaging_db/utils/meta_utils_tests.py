@@ -26,7 +26,8 @@ def test_make_empty_dataframe():
         "time_idx",
         "channel_name",
         "file_name",
-        "pos_idx"]
+        "pos_idx",
+        "sha256"]
     frames_meta = meta_utils.make_dataframe(nbr_frames=None)
     nose.tools.assert_equal(expected_names, list(frames_meta))
     nose.tools.assert_true(frames_meta.empty)

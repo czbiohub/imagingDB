@@ -18,7 +18,8 @@ DF_NAMES = ["channel_idx",
             "time_idx",
             "channel_name",
             "file_name",
-            "pos_idx"]
+            "pos_idx",
+            "sha256"]
 
 
 def make_dataframe(nbr_frames, col_names=DF_NAMES):

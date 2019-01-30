@@ -33,7 +33,7 @@ class TifFolderSplitter(file_splitter.FileSplitter):
                 meta_summary["BitDepth"]))
             raise ValueError
 
-    def _set_frame_meta_from_name(self, im_path, channel_names):
+    def _set_frame_meta_from_name(self, im_path, channel_names, im_stack):
         """
         Assume file follows naming convention
         img_channelname_t***_p***_z***.tif
@@ -60,6 +60,7 @@ class TifFolderSplitter(file_splitter.FileSplitter):
             elif s.find("z") == 0 and len(s) == 4:
                 meta_row["slice_idx"] = int(s[1:])
         meta_row["file_name"] = self._get_imname(meta_row)
+        meta_row["sha256"] = self._generate_hash(im_stack)
         # Make sure meta row is properly filled
         assert None not in meta_row.values(),\
             "meta row has not been populated correctly"
@@ -111,6 +112,7 @@ class TifFolderSplitter(file_splitter.FileSplitter):
             self.frames_meta.loc[i] = self._set_frame_meta_from_name(
                 im_path=frame_path,
                 channel_names=channel_names,
+                im_stack=self.im_stack
             )
             self.upload_stack(
                 file_names=[self.frames_meta.loc[i, "file_name"]],
