@@ -75,6 +75,10 @@ def gen_sha256(image):
     whole numpy. If the user passes in a file path, the 
     function will hash the file in 4kB chucks
 
+
+    :param ndarray/String image: ndarray containing the image to hash
+                                or string containing path to file
+                                to hash 
     :return String sha256: sha-256 hash of the input image
     """
 
