@@ -78,12 +78,9 @@ class FileSplitter(metaclass=ABCMeta):
 
         """
 
-        if im_stack.shape[3] == 1:
-            sha = meta_utils.gen_sha256(im_stack[...,0])
-        else:
-            sha = []
-            for i in range(im_stack.shape[3]):
-                sha.append(meta_utils.gen_sha256(im_stack[..., i]))
+        sha = []
+        for i in range(im_stack.shape[3]):
+            sha.append(meta_utils.gen_sha256(im_stack[..., i]))
 
         return sha
 

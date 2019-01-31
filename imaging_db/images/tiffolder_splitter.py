@@ -60,7 +60,7 @@ class TifFolderSplitter(file_splitter.FileSplitter):
             elif s.find("z") == 0 and len(s) == 4:
                 meta_row["slice_idx"] = int(s[1:])
         meta_row["file_name"] = self._get_imname(meta_row)
-        meta_row["sha256"] = self._generate_hash(im_stack)
+        meta_row["sha256"] = self._generate_hash(im_stack)[0]
         # Make sure meta row is properly filled
         assert None not in meta_row.values(),\
             "meta row has not been populated correctly"
