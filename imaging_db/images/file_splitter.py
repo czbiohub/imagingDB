@@ -73,6 +73,9 @@ class FileSplitter(metaclass=ABCMeta):
         """
         calculates the sha256 checksum for all image slices
 
+        :param ndarray im_stack: image to be hashed
+        :return list sha: sha256 hashes indexed by the image index
+
         """
 
         if im_stack.shape[3] == 1:
