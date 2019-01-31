@@ -82,7 +82,7 @@ class LifSplitter(file_splitter.FileSplitter):
                 # Some meta fields you can access with series index
                 # the other ones I don't know what to do with
                 try:
-                    str_eval = 'meta.' + meta_field + '(0)'
+                    str_eval = 'meta.{}({})'.format(meta_field, i)
                     dict_i[meta_field] = eval(str_eval)
                 except TypeError as e:
                     # Try no args
@@ -91,11 +91,18 @@ class LifSplitter(file_splitter.FileSplitter):
                         dict_i[meta_field] = eval(str_eval)
                     except TypeError as e:
                         try:
-                            str_eval = 'meta.' + meta_field + '(0, 0)'
+                            str_eval = 'meta.{}({}, 0)'.format(meta_field, i)
                             dict_i[meta_field] = eval(str_eval)
                         except TypeError as e:
                             print("Can't read {}".format(meta_field))
-            # TODO: You can also loop through dir(reader) :-(
+            # There is also metadata in reader we need to loop through
+            for meta_field in dir(reader):
+                if meta_field[0] != '_':
+                    try:
+                        dict_i[meta_field] = eval('reader.' + meta_field)
+                    except TypeError as e:
+                        print("Can't read {}".format(meta_field))
+
             self.frames_json.append(dict_i)
 
             meta_row = dict.fromkeys(meta_utils.DF_NAMES)
@@ -109,7 +116,7 @@ class LifSplitter(file_splitter.FileSplitter):
 
         # Set global metadata
         self.set_global_meta(nbr_frames=nbr_frames)
-        # self.upload_stack(
-        #     file_names=self.frames_meta["file_name"],
-        #     im_stack=self.im_stack,
-        # )
+        self.upload_stack(
+            file_names=self.frames_meta["file_name"],
+            im_stack=self.im_stack,
+        )
