@@ -1,5 +1,8 @@
 import numpy as np
 import pandas as pd
+import hashlib
+
+CHUNK_SIZE = 4096
 
 
 # Required metadata fields - everything else goes into a json
@@ -15,7 +18,8 @@ DF_NAMES = ["channel_idx",
             "time_idx",
             "channel_name",
             "file_name",
-            "pos_idx"]
+            "pos_idx",
+            "sha256"]
 
 
 def make_dataframe(nbr_frames, col_names=DF_NAMES):
@@ -63,3 +67,35 @@ def validate_global_meta(global_meta):
         keys_valid[idx] = key_valid
     assert np.all(keys_valid),\
         "Not all required metadata keys are present"
+
+def gen_sha256(image):
+    """
+    Generate the sha-256 hash of an image. If the user
+    passes in a numpy ndarray (usually a frame), hash the
+    whole numpy. If the user passes in a file path, the 
+    function will hash the file in 4kB chucks
+
+
+    :param ndarray/String image: ndarray containing the image to hash
+                                or string containing path to file
+                                to hash 
+    :return String sha256: sha-256 hash of the input image
+    """
+
+    sha = hashlib.sha256()
+
+    # If a frame is passed in, hash the numpy rray
+    if isinstance(image, np.ndarray):
+        sha.update(image.tobytes())
+    
+    # If a file path is passed in, hash the file in 4kB chunks
+    elif isinstance(image, str):
+        with open(image,"rb") as im:
+            for byte_block in iter(lambda: im.read(CHUNK_SIZE),b""):
+                sha.update(byte_block)
+
+    else:
+        raise TypeError('image must be a numpy ndarray (frame)',
+                        'or str (file path)')
+
+    return sha.hexdigest()

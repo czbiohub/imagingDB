@@ -203,6 +203,7 @@ class DatabaseOperations:
                     pos_idx=frames_meta.loc[i, "pos_idx"],
                     channel_name=frames_meta.loc[i, "channel_name"],
                     file_name=frames_meta.loc[i, "file_name"],
+                    sha256=frames_meta.loc[i, "sha256"],
                     metadata_json=frames_json_meta[i],
                     frames_global=new_frames_global,
                 )

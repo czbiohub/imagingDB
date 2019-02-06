@@ -120,7 +120,7 @@ class OmeTiffSplitter(file_splitter.FileSplitter):
         NOTE: It seems like the IJMetadata Info field is a dict converted into
         string, and it's only present in the first frame.
 
-        :param str schema_filename: Gull path to metadata json schema file
+        :param str schema_filename: Full path to metadata json schema file
         :param [None, list of ints] positions: Position files to upload.
             If None,
         """
@@ -165,6 +165,10 @@ class OmeTiffSplitter(file_splitter.FileSplitter):
                 file_path,
                 schema_filename,
             )
+
+            sha = self._generate_hash(im_stack)
+            file_meta['sha256'] = sha
+
             self.frames_meta = self.frames_meta.append(
                 file_meta,
                 ignore_index=True,

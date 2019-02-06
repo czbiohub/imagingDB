@@ -127,8 +127,7 @@ def download_data(args):
             dataset_serial=dataset_serial,
         )
     except Exception as e:
-        print(e)
-        raise
+        raise("Can't instantiate DB: {}".format(e))
 
     if args.metadata is False:
         # Just download file(s)

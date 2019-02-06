@@ -33,7 +33,7 @@ class TifFolderSplitter(file_splitter.FileSplitter):
                 meta_summary["BitDepth"]))
             raise ValueError
 
-    def _set_frame_meta_from_name(self, im_path, channel_names):
+    def _set_frame_meta_from_name(self, im_path, channel_names, im_stack):
         """
         Assume file follows naming convention
         img_channelname_t***_p***_z***.tif
@@ -60,6 +60,7 @@ class TifFolderSplitter(file_splitter.FileSplitter):
             elif s.find("z") == 0 and len(s) == 4:
                 meta_row["slice_idx"] = int(s[1:])
         meta_row["file_name"] = self._get_imname(meta_row)
+        meta_row["sha256"] = self._generate_hash(im_stack)[0]
         # Make sure meta row is properly filled
         assert None not in meta_row.values(),\
             "meta row has not been populated correctly"
@@ -91,7 +92,7 @@ class TifFolderSplitter(file_splitter.FileSplitter):
         channel_names = self.global_json["Summary"]["ChNames"]
         self.set_frame_info(self.global_json["Summary"])
         # Create empty image stack where last dimension is 1 for upload_frames
-        im_stack = np.empty((self.frame_shape[0],
+        self.im_stack = np.empty((self.frame_shape[0],
                                   self.frame_shape[1],
                                   self.im_colors,
                                   1),
@@ -101,7 +102,7 @@ class TifFolderSplitter(file_splitter.FileSplitter):
         # Loop over all the frames to get data and metadata
         for i, frame_path in enumerate(frame_paths):
             imtif = tifffile.TiffFile(frame_path)
-            im_stack[..., 0] = np.atleast_3d(imtif.asarray())
+            self.im_stack[..., 0] = np.atleast_3d(imtif.asarray())
             tiftags = imtif.pages[0].tags
             # Get all frame specific metadata
             dict_i = {}
@@ -111,10 +112,11 @@ class TifFolderSplitter(file_splitter.FileSplitter):
             self.frames_meta.loc[i] = self._set_frame_meta_from_name(
                 im_path=frame_path,
                 channel_names=channel_names,
+                im_stack=self.im_stack
             )
             self.upload_stack(
                 file_names=[self.frames_meta.loc[i, "file_name"]],
-                im_stack=im_stack,
+                im_stack=self.im_stack,
             )
         # Set global metadata
         self.set_global_meta(nbr_frames=nbr_frames)

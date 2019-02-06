@@ -21,6 +21,7 @@ class Frames(Base):
     pos_idx = Column(Integer)
     channel_name = Column(String)
     file_name = Column(String)
+    sha256 = Column(String)
     metadata_json = Column(JSONB)
     frames_global_id = Column(Integer, ForeignKey('frames_global.id'))
     frames_global = relationship("FramesGlobal", backref="frames")
@@ -32,6 +33,7 @@ class Frames(Base):
                  pos_idx,
                  channel_name,
                  file_name,
+                 sha256,
                  metadata_json,
                  frames_global):
         self.channel_idx = channel_idx
@@ -40,5 +42,6 @@ class Frames(Base):
         self.pos_idx = pos_idx
         self.channel_name = channel_name
         self.file_name = file_name
+        self.sha256 = sha256
         self.metadata_json = metadata_json
         self.frames_global = frames_global

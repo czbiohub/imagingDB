@@ -20,11 +20,13 @@ class FileGlobal(Base):
     # in a JSONB object
     metadata_json = Column(JSONB)
     dataset_id = Column(Integer, ForeignKey('data_set.id'))
+    sha256 = Column(String)
     # Provide one to one mapping with dataset
     data_set = relationship("DataSet",
                             backref=backref("file_global", uselist=False))
 
-    def __init__(self, s3_dir, metadata_json, data_set):
+    def __init__(self, s3_dir, metadata_json, data_set, sha256):
         self.s3_dir = s3_dir
         self.metadata_json = metadata_json
         self.data_set = data_set
+        self.sha256 = sha256
