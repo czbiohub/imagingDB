@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import argparse
 import os
 
 import imaging_db.filestorage.s3_storage as s3_storage
@@ -7,11 +8,30 @@ import imaging_db.database.db_session as db_session
 import imaging_db.utils.meta_utils as meta_utils
 
 
-def migrate_db():
+def parse_args():
+    """
+    Parse command line arguments for CLI
+
+    :return: namespace containing the arguments passed.
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--login',
+        type=str,
+        help="Full path to file containing JSON with DB login credentials",
+    )
+    return parser.parse_args()
+
+
+def migrate_db(credentials_filename):
+    """
+    Updates sha256 checksums for all files and frames
+
+    :param credentials_filename: Full path to DB credentials file
+    """
     # Edit this depending on where your database credential file is stored
     # This assumes it's stored in dir above imagingDB
     dir_name = os.path.abspath(os.path.join('..'))
-    credentials_filename = os.path.join(dir_name, 'db_credentials.json')
     dest_dir = os.path.join(dir_name, 'temp_downloads')
     os.makedirs(dest_dir, exist_ok=True)
 
@@ -47,4 +67,5 @@ def migrate_db():
 
 
 if __name__ == '__main__':
-    migrate_db()
+    args = parse_args()
+    migrate_db(args.login)
