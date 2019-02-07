@@ -418,6 +418,7 @@ class DatabaseOperations:
                 f.channel_name,
                 f.file_name,
                 f.pos_idx,
+                f.sha256,
             ]
         return global_meta, frames_meta
 
