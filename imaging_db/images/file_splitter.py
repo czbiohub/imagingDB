@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import pandas as pd
+import time
 
 import imaging_db.filestorage.s3_storage as s3_storage
 import imaging_db.utils.meta_utils as meta_utils
@@ -14,6 +15,7 @@ class FileSplitter(metaclass=ABCMeta):
                  s3_dir,
                  override=False,
                  file_format=".png",
+                 nbr_workers=4,
                  int2str_len=3):
         """
         :param str data_path: Full path to file or directory name
@@ -38,6 +40,7 @@ class FileSplitter(metaclass=ABCMeta):
         self.bit_depth = None
         self.data_uploader = s3_storage.DataStorage(
             s3_dir=s3_dir,
+            nbr_workers=nbr_workers,
         )
         if not override:
             self.data_uploader.assert_unique_id()
@@ -111,10 +114,12 @@ class FileSplitter(metaclass=ABCMeta):
         """
         try:
             # Upload stack frames to S3
+            time0 = time.time()
             self.data_uploader.upload_frames(
                 file_names=file_names,
                 im_stack=im_stack,
             )
+            print("Upload time: {:.2f}".format(time.time() - time0))
         except AssertionError as e:
             print("S3 upload failed: {}".format(e))
             raise
@@ -158,10 +163,12 @@ class FileSplitter(metaclass=ABCMeta):
     def upload_data(self, file_names):
         try:
             # Upload stack frames to S3
+            time0 = time.time()
             self.data_uploader.upload_frames(
                 file_names=file_names,
                 im_stack=self.im_stack,
             )
+            print("Upload time: {:.2f}".format(time.time() - time0))
         except AssertionError as e:
             print("Project already on S3, moving on to DB entry")
             print(e)

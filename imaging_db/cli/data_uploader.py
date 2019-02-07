@@ -92,6 +92,10 @@ def upload_data_and_update_db(args):
         "upload_type should be 'file' or 'frames', not {}".format(
             upload_type)
 
+    nbr_workers = config_json['nbr_workers']
+    assert nbr_workers > 0, \
+        "Nbr workers should be > 0, not {}".format(nbr_workers)
+
     # Make sure microscope is a string
     microscope = None
     if isinstance(config_json['microscope'], str):
@@ -171,6 +175,7 @@ def upload_data_and_update_db(args):
                 s3_dir=s3_dir,
                 override=args.override,
                 file_format=FRAME_FILE_FORMAT,
+                nbr_workers=nbr_workers,
             )
             # Get kwargs if any
             kwargs = {}
@@ -185,22 +190,20 @@ def upload_data_and_update_db(args):
             kwargs['filename_parser'] = filename_parser
             # Extract metadata and split file into frames
             frames_inst.get_frames_and_metadata(**kwargs)
-            # Generate hash
-            frames_inst.generate_hash()
             # Add frames metadata to database
-            try:
-                db_inst.insert_frames(
-                    description=description,
-                    frames_meta=frames_inst.get_frames_meta(),
-                    frames_json_meta=frames_inst.get_frames_json(),
-                    global_meta=frames_inst.get_global_meta(),
-                    global_json_meta=frames_inst.get_global_json(),
-                    microscope=microscope,
-                    parent_dataset=parent_dataset_id,
-                )
-
-            except AssertionError as e:
-                print("Data set {} already in DB".format(dataset_serial), e)
+            # try:
+            #     db_inst.insert_frames(
+            #         description=description,
+            #         frames_meta=frames_inst.get_frames_meta(),
+            #         frames_json_meta=frames_inst.get_frames_json(),
+            #         global_meta=frames_inst.get_global_meta(),
+            #         global_json_meta=frames_inst.get_global_json(),
+            #         microscope=microscope,
+            #         parent_dataset=parent_dataset_id,
+            #     )
+            #
+            # except AssertionError as e:
+            #     print("Data set {} already in DB".format(dataset_serial), e)
         # File upload
         else:
             # Just upload file without opening it

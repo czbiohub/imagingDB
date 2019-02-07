@@ -1,5 +1,7 @@
 import boto3
+import concurrent.futures
 import numpy as np
+import os
 
 import imaging_db.utils.image_utils as im_utils
 from tqdm import tqdm
@@ -9,15 +11,18 @@ from tqdm._utils import _term_move_up
 class DataStorage:
     """Class for handling data uploads to S3"""
 
-    def __init__(self, s3_dir):
+    def __init__(self, s3_dir, nbr_workers):
         """
         Initialize S3 client and check that ID doesn't exist already
 
-        :param str s3_dir: folder name in S3 bucket
+        :param str s3_dir: Folder name in S3 bucket
+        :param int nbr_workers: Number of workers for uploads/downloads
         """
         self.bucket_name = "czbiohub-imaging"
         self.s3_client = boto3.client('s3')
         self.s3_dir = s3_dir
+        self.nbr_workers = nbr_workers
+        print("nbr workers", nbr_workers)
 
     def assert_unique_id(self):
         """
@@ -32,7 +37,7 @@ class DataStorage:
 
     def upload_frames(self, file_names, im_stack, file_format=".png"):
         """
-        Upload all frames to S3
+        Upload all frames to S3 using threading
 
         :param list of str file_names: image file names
         :param np.array im_stack: all 2D frames from file converted to stack
@@ -43,15 +48,14 @@ class DataStorage:
             "Number of file names {} doesn't match slices {}".format(
                 len(file_names), im_stack.shape[-1])
 
-        # Create the progress bar for the file_names
-        slice_prog_bar = tqdm(enumerate(file_names), total=len(file_names), desc='Slice')
-        prefix = _term_move_up() + '\r'
-
-        for i, file_name in slice_prog_bar:
+        serialized_ims = []
+        keys = []
+        for i, file_name in enumerate(file_names):
             # Clear the terminal message
-            slice_prog_bar.write(prefix+'')
+            # slice_prog_bar.write(prefix+'')
 
             key = "/".join([self.s3_dir, file_name])
+            keys.append(key)
 
             # Make sure image doesn't already exist
             response = self.s3_client.list_objects_v2(
@@ -61,19 +65,35 @@ class DataStorage:
             try:
                 assert response['KeyCount'] == 0, \
                     "Key already exists on S3: {}".format(key)
-                # Serialize image
-                im_bytes = im_utils.serialize_im(
-                    im=im_stack[..., i],
-                    file_format=file_format,
-                )
-                # Upload slice to S3
-                self.s3_client.put_object(
-                    Bucket=self.bucket_name,
-                    Key=key,
-                    Body=im_bytes,
-                )
-            except Exception as e:
-                slice_prog_bar.write(prefix+"Key already exists, continuing")
+            except AssertionError as e:
+                print("Key already exists, continuing")
+
+            # Serialize image
+            im_bytes = im_utils.serialize_im(
+                im=im_stack[..., i],
+                file_format=file_format,
+            )
+            serialized_ims.append(im_bytes)
+
+        with concurrent.futures.ThreadPoolExecutor() as ex:
+            {ex.submit(self.upload_serialized, key_byte_tuple):
+                key_byte_tuple for key_byte_tuple in tqdm(zip(keys, serialized_ims))}
+
+    def upload_serialized(self, key_byte_tuple):
+        """
+        Upload serialized image
+
+        :param tuple key_byte_tuple: Containing key and byte string
+        """
+        (key, im_bytes) = key_byte_tuple
+        # Create new client
+        s3_client = boto3.client('s3')
+        # Upload slice to S3
+        s3_client.put_object(
+            Bucket=self.bucket_name,
+            Key=key,
+            Body=im_bytes,
+        )
 
     def upload_file(self, file_name):
         """
@@ -185,15 +205,34 @@ class DataStorage:
                           if dim_order.index(x) not in single_dims)
         return np.squeeze(im_stack), dim_str
 
-    def download_file(self, file_name, dest_path):
+    def download_files(self, file_names, dest_dir):
+        """
+        Download files to a directory given list of file names
+
+        :param list of str file_names: List of file names
+        :param str dest_dir: Destination directory name
+        :return:
+        """
+        with concurrent.futures.ThreadPoolExecutor() as ex:
+            {ex.submit(self.download_file, file_name, dest_dir):
+                file_name for file_name in tqdm(file_names)}
+
+
+    def download_file(self, file_name, dest_dir):
         """
         Download a single file to S3 without reading its contents
+        A new client is created to make boto3 thread safe
+        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/\
+        resources.html#multithreading-multiprocessing
 
-        :param str file_name: full path to file
-        :param str dest_path: full path to destination
+        :param str file_name: File name
+        :param str dest_dir: Destination directory name
         """
+        # Create a new client
+        s3_client = boto3.client('s3')
         key = "/".join([self.s3_dir, file_name])
-        self.s3_client.download_file(
+        dest_path = os.path.join(dest_dir, file_name)
+        s3_client.download_file(
             self.bucket_name,
             key,
             dest_path,
