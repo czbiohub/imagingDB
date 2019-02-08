@@ -22,7 +22,6 @@ class DataStorage:
         self.s3_client = boto3.client('s3')
         self.s3_dir = s3_dir
         self.nbr_workers = nbr_workers
-        print("nbr workers", nbr_workers)
 
     def assert_unique_id(self):
         """

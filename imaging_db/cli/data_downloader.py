@@ -206,6 +206,4 @@ def download_data(args):
 
 if __name__ == '__main__':
     args = parse_args()
-    time0 = time.time()
     download_data(args)
-    print("Download time: {:.2f}".format(time.time() - time0))

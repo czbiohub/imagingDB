@@ -114,12 +114,10 @@ class FileSplitter(metaclass=ABCMeta):
         """
         try:
             # Upload stack frames to S3
-            time0 = time.time()
             self.data_uploader.upload_frames(
                 file_names=file_names,
                 im_stack=im_stack,
             )
-            print("Upload time: {:.2f}".format(time.time() - time0))
         except AssertionError as e:
             print("S3 upload failed: {}".format(e))
             raise
@@ -163,12 +161,10 @@ class FileSplitter(metaclass=ABCMeta):
     def upload_data(self, file_names):
         try:
             # Upload stack frames to S3
-            time0 = time.time()
             self.data_uploader.upload_frames(
                 file_names=file_names,
                 im_stack=self.im_stack,
             )
-            print("Upload time: {:.2f}".format(time.time() - time0))
         except AssertionError as e:
             print("Project already on S3, moving on to DB entry")
             print(e)
