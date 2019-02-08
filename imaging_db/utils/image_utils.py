@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 
-def serialize_im(im, file_format):
+def serialize_im(im, file_format='.png'):
     """
     Convert image to bytes object for transfer to storage
 
