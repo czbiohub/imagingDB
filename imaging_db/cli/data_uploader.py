@@ -191,19 +191,19 @@ def upload_data_and_update_db(args):
             # Extract metadata and split file into frames
             frames_inst.get_frames_and_metadata(**kwargs)
             # Add frames metadata to database
-            # try:
-            #     db_inst.insert_frames(
-            #         description=description,
-            #         frames_meta=frames_inst.get_frames_meta(),
-            #         frames_json_meta=frames_inst.get_frames_json(),
-            #         global_meta=frames_inst.get_global_meta(),
-            #         global_json_meta=frames_inst.get_global_json(),
-            #         microscope=microscope,
-            #         parent_dataset=parent_dataset_id,
-            #     )
-            #
-            # except AssertionError as e:
-            #     print("Data set {} already in DB".format(dataset_serial), e)
+            try:
+                db_inst.insert_frames(
+                    description=description,
+                    frames_meta=frames_inst.get_frames_meta(),
+                    frames_json_meta=frames_inst.get_frames_json(),
+                    global_meta=frames_inst.get_global_meta(),
+                    global_json_meta=frames_inst.get_global_json(),
+                    microscope=microscope,
+                    parent_dataset=parent_dataset_id,
+                )
+
+            except AssertionError as e:
+                print("Data set {} already in DB".format(dataset_serial), e)
         # File upload
         else:
             # Just upload file without opening it
