@@ -182,7 +182,7 @@ def upload_data_and_update_db(args):
                 kwargs['schema_filename'] = config_json['schema_filename']
             if 'filename_parser' in config_json:
                 filename_parser = config_json['filename_parser']
-            kwargs['filename_parser'] = filename_parser
+                kwargs['filename_parser'] = filename_parser
             # Extract metadata and split file into frames
             frames_inst.get_frames_and_metadata(**kwargs)
             # Generate hash
