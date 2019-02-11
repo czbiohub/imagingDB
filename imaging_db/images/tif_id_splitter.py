@@ -157,7 +157,6 @@ class TifIDSplitter(file_splitter.FileSplitter):
             meta_row["file_name"] = self._get_imname(meta_row)
             self.frames_meta.loc[i] = meta_row
 
-
         sha = self._generate_hash(self.im_stack)
         self.frames_meta['sha256'] = sha
 

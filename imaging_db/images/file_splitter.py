@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import pandas as pd
+import time
 
 import imaging_db.filestorage.s3_storage as s3_storage
 import imaging_db.utils.meta_utils as meta_utils
@@ -14,6 +15,7 @@ class FileSplitter(metaclass=ABCMeta):
                  s3_dir,
                  override=False,
                  file_format=".png",
+                 nbr_workers=4,
                  int2str_len=3):
         """
         :param str data_path: Full path to file or directory name
@@ -38,6 +40,7 @@ class FileSplitter(metaclass=ABCMeta):
         self.bit_depth = None
         self.data_uploader = s3_storage.DataStorage(
             s3_dir=s3_dir,
+            nbr_workers=nbr_workers,
         )
         if not override:
             self.data_uploader.assert_unique_id()

@@ -2,13 +2,12 @@
 
 import argparse
 import os
+import time
 
 import imaging_db.cli.cli_utils as cli_utils
 import imaging_db.database.db_session as db_session
 import imaging_db.filestorage.s3_storage as s3_storage
 import imaging_db.metadata.json_validator as json_validator
-
-from tqdm import tqdm
 
 
 def parse_args():
@@ -50,7 +49,7 @@ def parse_args():
     parser.add_argument(
         '--dest',
         type=str,
-        help="Main destination folder, in which a subfolder named args.id "
+        help="Main destination directory, in which a subdir named args.id "
              "\will be created",
         required=True
     )
@@ -83,6 +82,12 @@ def parse_args():
         type=str,
         help="Full path to file containing JSON with DB login credentials",
     )
+    parser.add_argument(
+        '--nbr_workers',
+        type=int,
+        default=4,
+        help="Number of treads to increase download speed"
+    )
 
     return parser.parse_args()
 
@@ -94,7 +99,7 @@ def download_data(args):
 
     :param args: Command line arguments:
         str id: Unique dataset identifier
-        str dest: Local destination folder
+        str dest: Local destination directory name
         bool metadata: Writes metadata (default True)
             global metadata in json, local for each frame in csv
         bool download: Downloads all files associated with dataset (default)
@@ -113,11 +118,11 @@ def download_data(args):
     # dataset_serial. It stops if the subdirectory already exists to avoid
     # the risk of overwriting existing data
 
-    dest_folder = os.path.join(args.dest, dataset_serial)
+    dest_dir = os.path.join(args.dest, dataset_serial)
     try:
-        os.makedirs(dest_folder, exist_ok=False)
+        os.makedirs(dest_dir, exist_ok=False)
     except FileExistsError as e:
-        print("Folder {} already exists".format(dest_folder))
+        print("Folder {} already exists".format(dest_dir))
         return
 
     # Instantiate database class
@@ -170,18 +175,18 @@ def download_data(args):
             slices=slices,
         )
 
-        # Write global metadata to dest folder
+        # Write global metadata to destination directory
         global_meta_filename = os.path.join(
-            dest_folder,
+            dest_dir,
             "global_metadata.json",
         )
         json_validator.write_json_file(
             meta_dict=global_meta,
             json_filename=global_meta_filename,
         )
-        # Write info for each frame to dest folder
+        # Write info for each frame to destination directory
         local_meta_filename = os.path.join(
-            dest_folder,
+            dest_dir,
             "frames_meta.csv",
         )
         frames_meta.to_csv(local_meta_filename, sep=",")
@@ -190,12 +195,13 @@ def download_data(args):
         file_names = frames_meta["file_name"]
 
     if args.download:
+        assert args.nbr_workers > 0,\
+            "Nbr of worker must be >0, not {}".format(args.nbr_workers)
         data_loader = s3_storage.DataStorage(
             s3_dir=s3_dir,
+            nbr_workers=args.nbr_workers,
         )
-        for f in tqdm(file_names):
-            dest_path = os.path.join(dest_folder, f)
-            data_loader.download_file(file_name=f, dest_path=dest_path)
+        data_loader.download_files(file_names, dest_dir)
 
 
 if __name__ == '__main__':
