@@ -143,11 +143,9 @@ class DataStorage:
         with concurrent.futures.ThreadPoolExecutor(self.nbr_workers) as executor:
             future_result = executor.map(self.get_im, file_names)
 
-        print(list(future_result))
         for im_nbr, im in enumerate(future_result):
-            print(im_nbr)
-            print(im)
             im_stack[..., im_nbr] = np.atleast_3d(im)
+        return im_stack
 
     def get_stack_from_meta(self, global_meta, frames_meta):
         """
