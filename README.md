@@ -59,6 +59,7 @@ The data uploader takes:
     * _meta_schema:_ If doing a ome_tiff opload, you can specify a metadata 
     schema with required fields. See example in metadata_schema.json
     (optional for ome_tiff uploads).
+    * _nbr_workers:_ Number of threads used for image uploads (default = 4).
 
 If you want to validate metadata for each frame, you can specify a JSON schema file in the
 _meta_schema_ field of the csv. This metadata will be evaluated for each
@@ -82,6 +83,7 @@ The data_downloader CLI takes the following command line inputs:
 * **z, slices:** [tuple] Download only specified slice indices (optional)
 * **t, times:** [tuple] Download only specified time indices (optional)
 * **p, positions:** [tuple] Download only specified position indices (optional)
+* **nbr_workers:** [tuple] Number of threads used for data downloads (default = 4).
 
 ```buildoutcfg
 python imaging_db/cli/data_downloader.py --id ID-2018-04-05-00-00-00-0001 --dest /My/local/folder --login db_credentials.json

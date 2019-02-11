@@ -5,13 +5,12 @@ import os
 
 import imaging_db.utils.image_utils as im_utils
 from tqdm import tqdm
-from tqdm._utils import _term_move_up
 
 
 class DataStorage:
     """Class for handling data uploads to S3"""
 
-    def __init__(self, s3_dir, nbr_workers):
+    def __init__(self, s3_dir, nbr_workers=4):
         """
         Initialize S3 client and check that ID doesn't exist already
 
