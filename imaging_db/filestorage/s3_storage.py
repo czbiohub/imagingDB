@@ -73,7 +73,7 @@ class DataStorage:
             )
             serialized_ims.append(im_bytes)
 
-        with concurrent.futures.ThreadPoolExecutor() as ex:
+        with concurrent.futures.ThreadPoolExecutor(self.nbr_workers) as ex:
             {ex.submit(self.upload_serialized, key_byte_tuple):
                 key_byte_tuple for key_byte_tuple in tqdm(zip(keys, serialized_ims))}
 
@@ -117,16 +117,16 @@ class DataStorage:
         :param str file_name: slice file name
         :return np.array im: 2D image
         """
-
+        s3_client = boto3.client('s3')
         key = "/".join([self.s3_dir, file_name])
-        byte_str = self.s3_client.get_object(
+        byte_str = s3_client.get_object(
             Bucket=self.bucket_name,
             Key=key,
         )['Body'].read()
         # Construct an array from the bytes and decode image
         return im_utils.deserialize_im(byte_str)
 
-    def get_stack(self, file_names, stack_shape, bit_depth, verbose=False):
+    def get_stack(self, file_names, stack_shape, bit_depth):
         """
         Given file names, fetch images and return image stack.
         This function assumes that the frames in the list are contiguous,
@@ -140,15 +140,14 @@ class DataStorage:
         """
         im_stack = np.zeros(stack_shape, dtype=bit_depth)
 
-        if verbose:
-            for im_nbr in tqdm(range(len(file_names))):
-                im = self.get_im(file_names[im_nbr])
-                im_stack[..., im_nbr] = np.atleast_3d(im)
-        else:
-            for im_nbr in range(len(file_names)):
-                im = self.get_im(file_names[im_nbr])
-                im_stack[..., im_nbr] = np.atleast_3d(im)
-        return im_stack
+        with concurrent.futures.ThreadPoolExecutor(self.nbr_workers) as executor:
+            future_result = executor.map(self.get_im, file_names)
+
+        print(list(future_result))
+        for im_nbr, im in enumerate(future_result):
+            print(im_nbr)
+            print(im)
+            im_stack[..., im_nbr] = np.atleast_3d(im)
 
     def get_stack_from_meta(self, global_meta, frames_meta):
         """
@@ -211,7 +210,7 @@ class DataStorage:
         :param str dest_dir: Destination directory name
         :return:
         """
-        with concurrent.futures.ThreadPoolExecutor() as ex:
+        with concurrent.futures.ThreadPoolExecutor(self.nbr_workers) as ex:
             {ex.submit(self.download_file, file_name, dest_dir):
                 file_name for file_name in tqdm(file_names)}
 
