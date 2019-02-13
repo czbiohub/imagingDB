@@ -169,33 +169,33 @@ class DataStorage:
             X=im_height, Y=im_width, G=[gray/RGB] (1 or 3),
             Z=slice_idx, C=channel_idx, T=time_idx, P=pos_idx
         """
+        # Metadata don't have to be indexed starting at 0 or continuous
+        unique_slices = np.unique(frames_meta["slice_idx"])
+        unique_channels = np.unique(frames_meta["channel_idx"])
+        unique_times = np.unique(frames_meta["time_idx"])
+        unique_pos = np.unique(frames_meta["pos_idx"])
+
         stack_shape = (
             global_meta["im_height"],
             global_meta["im_width"],
             global_meta["im_colors"],
-            global_meta["nbr_slices"],
-            global_meta["nbr_channels"],
-            global_meta["nbr_timepoints"],
-            global_meta["nbr_positions"],
+            len(unique_slices),
+            len(unique_channels),
+            len(unique_times),
+            len(unique_pos),
         )
         im_stack = np.zeros(stack_shape, global_meta["bit_depth"])
-        # Metadata don't have to be indexed starting at 0 or continuous
-        unique_slice = np.unique(frames_meta["slice_idx"])
-        unique_channel = np.unique(frames_meta["channel_idx"])
-        unique_time = np.unique(frames_meta["time_idx"])
-        unique_pos = np.unique(frames_meta["pos_idx"])
 
         with concurrent.futures.ThreadPoolExecutor(self.nbr_workers) as executor:
-            future_result = executor.map(self.get_im, frames_meta['file_names'])
+            future_result = executor.map(self.get_im, frames_meta['file_name'])
 
         im_list = list(future_result)
         # Fill the image stack given dimensions
         for im_nbr, row in frames_meta.iterrows():
-            im = self.get_im(row.file_name)
             im_stack[:, :, :,
-                     np.where(unique_slice == row.slice_idx)[0][0],
-                     np.where(unique_channel == row.channel_idx)[0][0],
-                     np.where(unique_time == row.time_idx)[0][0],
+                     np.where(unique_slices == row.slice_idx)[0][0],
+                     np.where(unique_channels == row.channel_idx)[0][0],
+                     np.where(unique_times == row.time_idx)[0][0],
                      np.where(unique_pos == row.pos_idx)[0][0],
             ] = np.atleast_3d(im_list[im_nbr])
         # Return squeezed stack and string that indicates dimension order
