@@ -79,7 +79,8 @@ class DataStorage:
 
     def upload_serialized(self, key_byte_tuple):
         """
-        Upload serialized image
+        Upload serialized image. The tuple is to simplify threading executor
+        submission.
 
         :param tuple key_byte_tuple: Containing key and byte string
         """
@@ -184,6 +185,10 @@ class DataStorage:
         unique_time = np.unique(frames_meta["time_idx"])
         unique_pos = np.unique(frames_meta["pos_idx"])
 
+        with concurrent.futures.ThreadPoolExecutor(self.nbr_workers) as executor:
+            future_result = executor.map(self.get_im, frames_meta['file_names'])
+
+        im_list = list(future_result)
         # Fill the image stack given dimensions
         for im_nbr, row in frames_meta.iterrows():
             im = self.get_im(row.file_name)
@@ -192,7 +197,7 @@ class DataStorage:
                      np.where(unique_channel == row.channel_idx)[0][0],
                      np.where(unique_time == row.time_idx)[0][0],
                      np.where(unique_pos == row.pos_idx)[0][0],
-            ] = np.atleast_3d(im)
+            ] = np.atleast_3d(im_list[im_nbr])
         # Return squeezed stack and string that indicates dimension order
         dim_order = "XYGZCTP"
         single_dims = np.where(np.asarray(stack_shape) == 1)[0]
