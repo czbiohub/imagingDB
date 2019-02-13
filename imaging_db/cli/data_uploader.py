@@ -92,9 +92,11 @@ def upload_data_and_update_db(args):
         "upload_type should be 'file' or 'frames', not {}".format(
             upload_type)
 
-    nbr_workers = config_json['nbr_workers']
-    assert nbr_workers > 0, \
-        "Nbr workers should be > 0, not {}".format(nbr_workers)
+    nbr_workers = None
+    if 'nbr_workers' in config_json:
+        nbr_workers = config_json['nbr_workers']
+        assert nbr_workers > 0, \
+            "Nbr workers should be > 0, not {}".format(nbr_workers)
 
     # Make sure microscope is a string
     microscope = None
@@ -190,6 +192,7 @@ def upload_data_and_update_db(args):
                 kwargs['filename_parser'] = filename_parser
             # Extract metadata and split file into frames
             frames_inst.get_frames_and_metadata(**kwargs)
+
             # Add frames metadata to database
             try:
                 db_inst.insert_frames(
@@ -218,8 +221,7 @@ def upload_data_and_update_db(args):
                 data_uploader.upload_file(file_name=row.file_name)
                 print("File {} uploaded to S3".format(row.file_name))
             except AssertionError as e:
-                print("File {} already on S3, moving on to DB entry")
-                print(e)
+                print("File already on S3, moving on to DB entry. {}".format(e))
 
             sha = meta_utils.gen_sha256(row.file_name)
             # Add file entry to DB once I can get it tested

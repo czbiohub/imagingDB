@@ -2,7 +2,6 @@
 
 import argparse
 import os
-import time
 
 import imaging_db.cli.cli_utils as cli_utils
 import imaging_db.database.db_session as db_session
@@ -85,7 +84,7 @@ def parse_args():
     parser.add_argument(
         '--nbr_workers',
         type=int,
-        default=4,
+        default=None,
         help="Number of treads to increase download speed"
     )
 
@@ -195,8 +194,10 @@ def download_data(args):
         file_names = frames_meta["file_name"]
 
     if args.download:
-        assert args.nbr_workers > 0,\
-            "Nbr of worker must be >0, not {}".format(args.nbr_workers)
+        print(args.nbr_workers)
+        if args.nbr_workers is not None:
+            assert args.nbr_workers > 0,\
+                "Nbr of worker must be >0, not {}".format(args.nbr_workers)
         data_loader = s3_storage.DataStorage(
             s3_dir=s3_dir,
             nbr_workers=args.nbr_workers,
@@ -207,3 +208,4 @@ def download_data(args):
 if __name__ == '__main__':
     args = parse_args()
     download_data(args)
+

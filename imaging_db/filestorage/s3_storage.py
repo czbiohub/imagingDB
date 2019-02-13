@@ -10,7 +10,7 @@ from tqdm import tqdm
 class DataStorage:
     """Class for handling data uploads to S3"""
 
-    def __init__(self, s3_dir, nbr_workers=4):
+    def __init__(self, s3_dir, nbr_workers=None):
         """
         Initialize S3 client and check that ID doesn't exist already
 
@@ -73,7 +73,7 @@ class DataStorage:
             )
             serialized_ims.append(im_bytes)
 
-        with concurrent.futures.ThreadPoolExecutor(self.nbr_workers) as ex:
+        with concurrent.futures.ThreadPoolExecutor() as ex:
             {ex.submit(self.upload_serialized, key_byte_tuple):
                 key_byte_tuple for key_byte_tuple in tqdm(zip(keys, serialized_ims))}
 
