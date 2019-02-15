@@ -1,8 +1,9 @@
 import glob
+import natsort
 import numpy as np
 import os
 import tifffile
-import pdb
+
 import imaging_db.images.file_splitter as file_splitter
 import imaging_db.metadata.json_validator as json_validator
 import imaging_db.utils.aux_utils as aux_utils
@@ -66,7 +67,7 @@ class TifFolderSplitter(file_splitter.FileSplitter):
         parse_func(file_name, self.channel_names, meta_row)
 
         meta_row["file_name"] = self._get_imname(meta_row)
-        meta_row["sha256"] = self._generate_hash(self.im_stack)
+        meta_row["sha256"] = self._generate_hash(self.im_stack)[0]
 
         # Make sure meta row is properly filled
         assert None not in meta_row.values(), \
@@ -83,7 +84,9 @@ class TifFolderSplitter(file_splitter.FileSplitter):
         assert os.path.isdir(self.data_path), \
             "Directory doesn't exist: {}".format(self.data_path)
 
-        frame_paths = glob.glob(os.path.join(self.data_path, "*.tif"))
+        frame_paths = natsort.natsorted(
+            glob.glob(os.path.join(self.data_path, "*.tif")),
+        )
         nbr_frames = len(frame_paths)
 
         try:
