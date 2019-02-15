@@ -5,7 +5,8 @@ install:
   - pip install coverage
   - pip install -r requirements.txt
 script:
-  - nosetests -v --with-coverage --cover-tests
+  - export BOTO_CONFIG=/dev/null
+  - nosetests -v --with-coverage --cover-package=imaging_db/
 notifications:
   email:
     recipients:
