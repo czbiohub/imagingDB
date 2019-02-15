@@ -1,0 +1,7 @@
+{
+    "upload_type": "frames",
+    "frames_format": "tif_folder",
+    "microscope": "CZDRAGONFLY-PC",
+    "filename_parser": "parse_sms_name",
+    "nbr_workers": 8
+}
