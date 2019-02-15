@@ -63,6 +63,7 @@ def parse_sms_name(file_name, channel_names, meta_row):
     group, who has the following file naming convention:
     File naming convention is assumed to be:
         img_channelname_t***_p***_z***.tif
+    This function will alter list and dict in place.
 
     :param str file_name: File name or path
     :param list[str] channel_names: Expanding list of channel names
