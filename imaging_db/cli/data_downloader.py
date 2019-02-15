@@ -111,7 +111,7 @@ def download_data(args):
     try:
         cli_utils.validate_id(dataset_serial)
     except AssertionError as e:
-        print("Invalid ID:", e)
+        raise("Invalid ID:", e)
 
     # Create output directory as a subdirectory in args.dest named
     # dataset_serial. It stops if the subdirectory already exists to avoid
@@ -121,8 +121,7 @@ def download_data(args):
     try:
         os.makedirs(dest_dir, exist_ok=False)
     except FileExistsError as e:
-        print("Folder {} already exists".format(dest_dir))
-        return
+        raise("Folder {} already exists, {}".format(dest_dir, e))
 
     # Instantiate database class
     try:
@@ -194,7 +193,6 @@ def download_data(args):
         file_names = frames_meta["file_name"]
 
     if args.download:
-        print(args.nbr_workers)
         if args.nbr_workers is not None:
             assert args.nbr_workers > 0,\
                 "Nbr of worker must be >0, not {}".format(args.nbr_workers)

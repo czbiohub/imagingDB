@@ -47,6 +47,12 @@ def parse_args():
              "will continue upload where it stopped. Use with caution.",
     )
     parser.set_defaults(override=False)
+    parser.add_argument(
+        '--nbr_workers',
+        type=int,
+        default=None,
+        help="Number of treads to increase download speed"
+    )
 
     return parser.parse_args()
 
@@ -92,11 +98,9 @@ def upload_data_and_update_db(args):
         "upload_type should be 'file' or 'frames', not {}".format(
             upload_type)
 
-    nbr_workers = None
-    if 'nbr_workers' in config_json:
-        nbr_workers = config_json['nbr_workers']
-        assert nbr_workers > 0, \
-            "Nbr workers should be > 0, not {}".format(nbr_workers)
+    if args.nbr_workers is not None:
+        assert args.nbr_workers > 0, \
+            "Nbr of worker must be >0, not {}".format(args.nbr_workers)
 
     # Make sure microscope is a string
     microscope = None
