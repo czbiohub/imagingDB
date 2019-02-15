@@ -1,11 +1,12 @@
 language: python
 python:
   - 3.6
+before_install:
+  - export BOTO_CONFIG=/dev/null
 install:
   - pip install coverage
   - pip install -r requirements.txt
 script:
-  - export BOTO_CONFIG=/dev/null
   - nosetests -v --with-coverage --cover-package=imaging_db/
 notifications:
   email:
