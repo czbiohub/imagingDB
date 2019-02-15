@@ -6,7 +6,6 @@ before_install:
   - export AWS_SECRET_ACCESS_KEY=foobar_secret
   - export AWS_ACCESS_KEY_ID=foobar_key
 install:
-  - python setup.py sdist
   - pip install coverage
   - pip install -r requirements.txt
 script:
