@@ -2,7 +2,7 @@ language: python
 python:
   - 3.6
 install:
+  - pip install coverage
   - pip install -r requirements.txt
 script:
-  - nosetests -v --with-coverage --cover-tests --cover-package=noseselecttests noseselecttests/tests.py
-  - nosetests -v --with-coverage --cover-tests --cover-package=noseselecttests noseselecttests/tests.py
+  - nosetests -v --with-coverage --cover-tests

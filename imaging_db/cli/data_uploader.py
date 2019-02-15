@@ -5,7 +5,7 @@ import os
 import pandas as pd
 from tqdm import tqdm
 
-import imaging_db.cli.cli_utils as cli_utils
+import imaging_db.utils.cli_utils as cli_utils
 import imaging_db.database.db_session as db_session
 import imaging_db.filestorage.s3_storage as s3_storage
 import imaging_db.metadata.json_validator as json_validator
