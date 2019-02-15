@@ -1,7 +1,5 @@
 from abc import ABCMeta, abstractmethod
 import numpy as np
-import pandas as pd
-import time
 
 import imaging_db.filestorage.s3_storage as s3_storage
 import imaging_db.utils.meta_utils as meta_utils

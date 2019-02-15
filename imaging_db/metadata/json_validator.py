@@ -22,10 +22,9 @@ CONFIG_SCHEMA = {
         "frames_format": {"type": "string"},
         "meta_schema": {"type": "string"},
         "microscope": {"type": "string"},
-        "filename_parser": {"type": "string"},
-        "nbr_workers": {"type": "integer"}
+        "filename_parser": {"type": "string"}
     },
-    "required": ["upload_type", "microscope", "nbr_workers"],
+    "required": ["upload_type", "microscope"],
 }
 
 # More Micromanager metadata properties should be added

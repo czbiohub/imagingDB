@@ -10,7 +10,7 @@ from tqdm import tqdm
 class DataStorage:
     """Class for handling data uploads to S3"""
 
-    def __init__(self, s3_dir, nbr_workers=4):
+    def __init__(self, s3_dir, nbr_workers=None):
         """
         Initialize S3 client and check that ID doesn't exist already
 
@@ -79,7 +79,8 @@ class DataStorage:
 
     def upload_serialized(self, key_byte_tuple):
         """
-        Upload serialized image
+        Upload serialized image. The tuple is to simplify threading executor
+        submission.
 
         :param tuple key_byte_tuple: Containing key and byte string
         """
@@ -117,16 +118,16 @@ class DataStorage:
         :param str file_name: slice file name
         :return np.array im: 2D image
         """
-
+        s3_client = boto3.client('s3')
         key = "/".join([self.s3_dir, file_name])
-        byte_str = self.s3_client.get_object(
+        byte_str = s3_client.get_object(
             Bucket=self.bucket_name,
             Key=key,
         )['Body'].read()
         # Construct an array from the bytes and decode image
         return im_utils.deserialize_im(byte_str)
 
-    def get_stack(self, file_names, stack_shape, bit_depth, verbose=False):
+    def get_stack(self, file_names, stack_shape, bit_depth):
         """
         Given file names, fetch images and return image stack.
         This function assumes that the frames in the list are contiguous,
@@ -140,14 +141,11 @@ class DataStorage:
         """
         im_stack = np.zeros(stack_shape, dtype=bit_depth)
 
-        if verbose:
-            for im_nbr in tqdm(range(len(file_names))):
-                im = self.get_im(file_names[im_nbr])
-                im_stack[..., im_nbr] = np.atleast_3d(im)
-        else:
-            for im_nbr in range(len(file_names)):
-                im = self.get_im(file_names[im_nbr])
-                im_stack[..., im_nbr] = np.atleast_3d(im)
+        with concurrent.futures.ThreadPoolExecutor(self.nbr_workers) as executor:
+            future_result = executor.map(self.get_im, file_names)
+
+        for im_nbr, im in enumerate(future_result):
+            im_stack[..., im_nbr] = np.atleast_3d(im)
         return im_stack
 
     def get_stack_from_meta(self, global_meta, frames_meta):
@@ -171,31 +169,35 @@ class DataStorage:
             X=im_height, Y=im_width, G=[gray/RGB] (1 or 3),
             Z=slice_idx, C=channel_idx, T=time_idx, P=pos_idx
         """
+        # Metadata don't have to be indexed starting at 0 or continuous
+        unique_slices = np.unique(frames_meta["slice_idx"])
+        unique_channels = np.unique(frames_meta["channel_idx"])
+        unique_times = np.unique(frames_meta["time_idx"])
+        unique_pos = np.unique(frames_meta["pos_idx"])
+
         stack_shape = (
             global_meta["im_height"],
             global_meta["im_width"],
             global_meta["im_colors"],
-            global_meta["nbr_slices"],
-            global_meta["nbr_channels"],
-            global_meta["nbr_timepoints"],
-            global_meta["nbr_positions"],
+            len(unique_slices),
+            len(unique_channels),
+            len(unique_times),
+            len(unique_pos),
         )
         im_stack = np.zeros(stack_shape, global_meta["bit_depth"])
-        # Metadata don't have to be indexed starting at 0 or continuous
-        unique_slice = np.unique(frames_meta["slice_idx"])
-        unique_channel = np.unique(frames_meta["channel_idx"])
-        unique_time = np.unique(frames_meta["time_idx"])
-        unique_pos = np.unique(frames_meta["pos_idx"])
 
+        with concurrent.futures.ThreadPoolExecutor(self.nbr_workers) as executor:
+            future_result = executor.map(self.get_im, frames_meta['file_name'])
+
+        im_list = list(future_result)
         # Fill the image stack given dimensions
         for im_nbr, row in frames_meta.iterrows():
-            im = self.get_im(row.file_name)
             im_stack[:, :, :,
-                     np.where(unique_slice == row.slice_idx)[0][0],
-                     np.where(unique_channel == row.channel_idx)[0][0],
-                     np.where(unique_time == row.time_idx)[0][0],
+                     np.where(unique_slices == row.slice_idx)[0][0],
+                     np.where(unique_channels == row.channel_idx)[0][0],
+                     np.where(unique_times == row.time_idx)[0][0],
                      np.where(unique_pos == row.pos_idx)[0][0],
-            ] = np.atleast_3d(im)
+            ] = np.atleast_3d(im_list[im_nbr])
         # Return squeezed stack and string that indicates dimension order
         dim_order = "XYGZCTP"
         single_dims = np.where(np.asarray(stack_shape) == 1)[0]
@@ -211,7 +213,7 @@ class DataStorage:
         :param str dest_dir: Destination directory name
         :return:
         """
-        with concurrent.futures.ThreadPoolExecutor() as ex:
+        with concurrent.futures.ThreadPoolExecutor(self.nbr_workers) as ex:
             {ex.submit(self.download_file, file_name, dest_dir):
                 file_name for file_name in tqdm(file_names)}
 

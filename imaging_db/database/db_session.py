@@ -372,9 +372,6 @@ class DatabaseOperations:
         else:
             raise ValueError('Invalid slice query')
 
-        sliced_frames.order_by(Frames.slice_idx).order_by(Frames.channel_idx) \
-            .order_by(Frames.time_idx).order_by(Frames.pos_idx)
-
         assert sliced_frames.count() > 0,\
             'No frames matched the query'
 
@@ -436,7 +433,7 @@ class DatabaseOperations:
         :param [str, tuple] times: a tuple containing time indices to be
                         fetched use 'all' to get all times.
         :param [str, tuple] channels: a tuple containing channels (use
-                        channel names e.g., 'Cy3', or integer indice) to be
+                        channel names e.g., 'Cy3', or integer indices) to be
                         fetched. Use 'all' to get all channels.
         :param [str, tuple] slices: a tuple containing slice indices
                         to be fetched use 'all' to get all channels.
@@ -457,7 +454,8 @@ class DatabaseOperations:
             all_frames = session.query(Frames) \
                 .join(FramesGlobal) \
                 .join(DataSet) \
-                .filter(DataSet.dataset_serial == dataset.dataset_serial)
+                .filter(DataSet.dataset_serial == dataset.dataset_serial) \
+                .order_by(Frames.file_name)
 
             # Get the specified slices
             sliced_frames = self._slice_frames(

@@ -3,5 +3,4 @@
     "frames_format": "tif_id",
     "microscope": "Leica microscope CAN bus adapter",
     "filename_parser": "parse_ml_name",
-    "nbr_workers": 8
 }

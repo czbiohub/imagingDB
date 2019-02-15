@@ -1,5 +1,6 @@
 awscli
 boto3
+ffmpeg
 jsonschema
 moto
 nose
