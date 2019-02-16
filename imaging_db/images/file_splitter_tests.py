@@ -1,3 +1,5 @@
+import boto3
+from moto import mock_s3
 import nose.tools
 import unittest
 from unittest.mock import patch
@@ -18,6 +20,12 @@ class TestFileSplitter(unittest.TestCase):
             data_path=self.test_path,
             s3_dir=self.test_dir,
         )
+        # Setup mock S3 bucket
+        self.mock = mock_s3()
+        self.mock.start()
+        self.conn = boto3.resource('s3', region_name='us-east-1')
+        self.bucket_name = 'czbiohub-imaging'
+        self.conn.create_bucket(Bucket=self.bucket_name)
 
     def tearDown(self):
         """
