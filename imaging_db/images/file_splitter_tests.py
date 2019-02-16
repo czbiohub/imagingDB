@@ -19,6 +19,12 @@ class TestFileSplitter(unittest.TestCase):
             s3_dir=self.test_dir,
         )
 
+    def tearDown(self):
+        """
+        Stop S3 mock
+        """
+        self.mock.stop()
+
     def test_init(self):
         nose.tools.assert_equal(self.mock_inst.data_path, self.test_path)
         nose.tools.assert_equal(self.mock_inst.s3_dir, self.test_dir)
