@@ -162,9 +162,11 @@ class TestTifFolderSplitter(unittest.TestCase):
         self.assertEqual(meta_row['slice_idx'], 30)
         self.assertEqual(meta_row['pos_idx'], 40)
 
-    @nose.tools.raises(ValueError)
+    @nose.tools.raises(AttributeError)
     def test_get_frames_and_metadata_no_parser(self):
-        self.frames_inst.get_frames_and_metadata()
+        self.frames_inst.get_frames_and_metadata(
+            filename_parser='nonexisting_function',
+        )
 
     def test_get_frames_and_metadata(self):
         # Download uploaded data and compare to self.im

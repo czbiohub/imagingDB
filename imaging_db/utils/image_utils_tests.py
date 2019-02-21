@@ -1,4 +1,3 @@
-import cv2
 import nose.tools
 import numpy as np
 import numpy.testing
@@ -14,7 +13,7 @@ def test_serialize_deserialize():
     numpy.testing.assert_array_equal(im, im_deserial)
 
 
-@nose.tools.raises(cv2.error)
+@nose.tools.raises(TypeError)
 def test_serialize_wrong_format():
     im = np.random.rand(10, 15) * 255
     im_utils.serialize_im(im, '.npy')

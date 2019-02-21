@@ -64,7 +64,7 @@ class TifFolderSplitter(file_splitter.FileSplitter):
         :return dict meta_row: Structured metadata for frame
         """
         meta_row = dict.fromkeys(meta_utils.DF_NAMES)
-        parse_func(file_name, self.channel_names, meta_row)
+        parse_func(file_name, meta_row, self.channel_names)
 
         meta_row["file_name"] = self._get_imname(meta_row)
         meta_row["sha256"] = self._generate_hash(self.im_stack)[0]
@@ -74,15 +74,28 @@ class TifFolderSplitter(file_splitter.FileSplitter):
             "meta row has not been populated correctly"
         return meta_row
 
-    def get_frames_and_metadata(self, filename_parser=None):
+    def get_frames_and_metadata(self, filename_parser='parse_idx_from_name'):
         """
-        Global metadata dict is assumed to be in the same folder in a file
-        named metadata.txt
         Frame metadata is extracted from each frame, and frames are uploaded
-        on a file by file basis
+        on a file by file basis.
+        Since metadata is separated from files, the file name must contain the
+        required indices channel_idx, slice_idx, time and pos_idx. By default,
+        it will assume that the file name contains 4 integers corresponding to
+        these 4 indices. If that's not the case, you can specify a custom parser
+        in aux_utils.
+        Global metadata dict is assumed to be in the same folder in a file
+        named metadata.txt (optional).
+
+        :param str filename_parser:
         """
         assert os.path.isdir(self.data_path), \
             "Directory doesn't exist: {}".format(self.data_path)
+
+        try:
+            parse_func = getattr(aux_utils, filename_parser)
+        except AttributeError as e:
+            raise AttributeError(
+                "Must use aux_utils function for file name. {}".format(e))
 
         frame_paths = natsort.natsorted(
             glob.glob(os.path.join(self.data_path, "*.tif")),
@@ -107,11 +120,6 @@ class TifFolderSplitter(file_splitter.FileSplitter):
 
         self.frames_meta = meta_utils.make_dataframe(nbr_frames=nbr_frames)
         self.frames_json = []
-        if filename_parser is not None:
-            parse_func = getattr(aux_utils, filename_parser)
-        else:
-            raise ValueError("File name must be parsed using aux utils function")
-
         # Loop over all the frames to get data and metadata
         for i, frame_path in enumerate(frame_paths):
             imtif = tifffile.TiffFile(frame_path)
