@@ -12,7 +12,10 @@ def serialize_im(im, file_format='.png'):
     """
     # Get rid of any singleton dimensions
     im = np.squeeze(im)
-    res, im_encoded = cv2.imencode(file_format, im)
+    try:
+        res, im_encoded = cv2.imencode(file_format, im)
+    except cv2.error as e:
+        raise TypeError("Wrong file format: {}. {}".format(file_format, e))
     return im_encoded.tostring()
 
 

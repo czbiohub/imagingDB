@@ -1,3 +1,5 @@
+import boto3
+from moto import mock_s3
 import nose.tools
 import unittest
 from unittest.mock import patch
@@ -12,12 +14,25 @@ class TestFileSplitter(unittest.TestCase):
 
     @patch.multiple(file_splitter.FileSplitter, __abstractmethods__=set())
     def setUp(self):
+        # Setup mock S3 bucket
+        self.mock = mock_s3()
+        self.mock.start()
+        self.conn = boto3.resource('s3', region_name='us-east-1')
+        self.bucket_name = 'czbiohub-imaging'
+        self.conn.create_bucket(Bucket=self.bucket_name)
+        # Start mock instance
         self.test_path = "/datapath/testfile.tif"
         self.test_dir = "raw_frames/ISP-2005-06-09-20-00-00-0001"
         self.mock_inst = file_splitter.FileSplitter(
             data_path=self.test_path,
             s3_dir=self.test_dir,
         )
+
+    def tearDown(self):
+        """
+        Stop S3 mock
+        """
+        self.mock.stop()
 
     def test_init(self):
         nose.tools.assert_equal(self.mock_inst.data_path, self.test_path)
@@ -72,7 +87,6 @@ class TestFileSplitter(unittest.TestCase):
         self.mock_inst.set_global_meta(nbr_frames=nbr_frames)
         # Assert contents
         meta = self.mock_inst.get_global_meta()
-        print(meta)
         nose.tools.assert_equal(meta['s3_dir'], self.test_dir)
         nose.tools.assert_equal(meta['nbr_frames'], nbr_frames)
         nose.tools.assert_equal(meta['im_height'], test_shape[0])

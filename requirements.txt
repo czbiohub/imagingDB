@@ -3,6 +3,7 @@ boto3
 ffmpeg
 jsonschema
 moto
+natsort
 nose
 numpy
 opencv-python

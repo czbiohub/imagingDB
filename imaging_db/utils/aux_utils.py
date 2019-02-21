@@ -1,6 +1,7 @@
 import importlib
 import inspect
 import os
+import re
 
 
 def import_class(module_name, cls_name):
@@ -52,3 +53,82 @@ def parse_ml_name(file_name):
                  "protein_name": str_list[2]}
 
     return meta_json
+
+
+def parse_sms_name(file_name, meta_row, channel_names):
+    """
+    Parse metadata from file name or file path.
+    This function is custom for the computational microscopy (SMS)
+    group, who has the following file naming convention:
+    File naming convention is assumed to be:
+        img_channelname_t***_p***_z***.tif
+    This function will alter list and dict in place.
+
+    :param str file_name: File name or path
+    :param dict meta_row: Metadata for frame (one row in dataframe)
+    :param list[str] channel_names: Expanding list of channel names
+    """
+    # Get rid of path if present
+    file_str = os.path.basename(file_name)[:-4]
+    str_split = file_str.split("_")[1:]
+
+    if len(str_split) > 4:
+        # this means they have introduced additional _ in the file name
+        channel_name = '_'.join(str_split[:-3])
+    else:
+        channel_name = str_split[0]
+    # Add channel name and index
+    meta_row["channel_name"] = channel_name
+    if channel_name not in channel_names:
+        channel_names.append(channel_name)
+    # Index channels by names
+    meta_row["channel_idx"] = channel_names.index(channel_name)
+    # Loop through the rest of the indices which should be in name
+    str_split = str_split[-3:]
+    for s in str_split:
+        if s.find("t") == 0 and len(s) == 4:
+            meta_row["time_idx"] = int(s[1:])
+        elif s.find("p") == 0 and len(s) == 4:
+            meta_row["pos_idx"] = int(s[1:])
+        elif s.find("z") == 0 and len(s) == 4:
+            meta_row["slice_idx"] = int(s[1:])
+
+
+def parse_idx_from_name(file_name, meta_row, channel_names, order="cztp"):
+    """
+    Assumes file name contains all 4 indices necessary for imagingDB:
+     channel_idx (c), slice_idx (z), time_idx (t) and pos_idx (p)
+    E.g. im_c***_z***_p***_t***.png
+    It doesn't care about the extension or the number of digits each index is
+    represented by, it extracts all integers from the image file name and assigns
+    them by order. By default it assumes that the order is c, z, t, p.
+
+    :param str file_name: Image name without path
+    :param dict meta_row: One row of metadata given image file name
+    :param list[str] channel_names: Expanding list of channel names
+    :param str order: Order in which c, z, t, p are given in the image (4 chars)
+    """
+    # Get rid of path if present
+    file_str = os.path.basename(file_name)[:-4]
+    order_list = list(order)
+    assert len(set(order_list)) == 4,\
+        "Order needs 4 unique values, not {}".format(order)
+
+    # Find all integers in name string
+    ints = re.findall(r'\d+', file_str)
+    assert len(ints) == 4, "Expected 4 integers, found {}".format(len(ints))
+    # Assign indices based on ints and order
+    idx_dict = {"c": "channel_idx",
+                "z": "slice_idx",
+                "t": "time_idx",
+                "p": "pos_idx"}
+    for i in idx_dict.keys():
+        assert i in order_list, "{} not in order".format(i)
+    for i, order_char in enumerate(order_list):
+        idx_name = idx_dict[order_char]
+        meta_row[idx_name] = int(ints[i])
+    # Channel name can't be retrieved from image name
+    channel_name = str(meta_row['channel_idx'])
+    if channel_name not in channel_names:
+        channel_names.append(channel_name)
+    meta_row["channel_name"] = channel_name

@@ -1,6 +1,6 @@
 import nose.tools
 
-import imaging_db.cli.cli_utils as cli_utils
+import imaging_db.utils.cli_utils as cli_utils
 
 
 def test_validate_id():

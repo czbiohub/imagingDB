@@ -84,7 +84,7 @@ def gen_sha256(image):
 
     sha = hashlib.sha256()
 
-    # If a frame is passed in, hash the numpy rray
+    # If a frame is passed in, hash the numpy array
     if isinstance(image, np.ndarray):
         sha.update(image.tobytes())
     
