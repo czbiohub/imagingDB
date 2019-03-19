@@ -36,7 +36,7 @@ def migrate_db(credentials_filename):
     os.makedirs(dest_dir, exist_ok=True)
 
     # Get files and compute checksums
-    with db_session.session_scope(credentials_filename) as session:
+    with db_session.session_scope(credentials_str) as session:
         files = session.query(db_session.FileGlobal)
         for file in files:
             if file.sha256 is None:

@@ -8,6 +8,8 @@ before_install:
 install:
   - pip install coverage
   - pip install -r requirements.txt
+services:
+  - postgres
 script:
   - nosetests -v --with-coverage --cover-package=imaging_db/
 notifications:

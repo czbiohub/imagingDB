@@ -13,20 +13,14 @@ import imaging_db.utils.meta_utils as meta_utils
 
 
 @contextmanager
-def session_scope(credentials_filename, echo_sql=False):
+def session_scope(credentials_str, echo_sql=False):
     """
     Provide a transactional scope around a series of
     database operations.
 
-    :param str credentials_filename: JSON file containing database credentials
+    :param str credentials_str: URI for connecting to the database
     :return SQLAlchemy session
     """
-    # Read and validate json
-    credentials_json = json_validator.read_json_file(
-        json_filename=credentials_filename,
-        schema_name="CREDENTIALS_SCHEMA")
-    # Convert json to string compatible with engine
-    credentials_str = json_to_uri(credentials_json)
     # Create SQLAlchemy engine, connect and return session
     engine = create_engine(credentials_str, echo=echo_sql)
     # create a configured "Session" class
@@ -74,9 +68,15 @@ class DatabaseOperations:
         """
         :param str credentials_filename: full path to JSON file with
             login credentials
-        :param dataset_serial:
+        :param dataset_serial: Unique dataset identifier
         """
         self.credentials_filename = credentials_filename
+        # Read and validate json
+        credentials_json = json_validator.read_json_file(
+            json_filename=credentials_filename,
+            schema_name="CREDENTIALS_SCHEMA")
+        # Convert json to string compatible with engine
+        self.credentials_str = json_to_uri(credentials_json)
         self.dataset_serial = dataset_serial
         self.test_connection()
 
@@ -87,7 +87,7 @@ class DatabaseOperations:
         :raise Exception: if you can't log in
         """
         try:
-            with session_scope(self.credentials_filename) as session:
+            with session_scope(self.credentials_str) as session:
                 session.execute('SELECT 1')
         except Exception as e:
             print("Can't connect to database", e)
@@ -99,7 +99,7 @@ class DatabaseOperations:
 
         :param dataset_serial: unique identifer for dataset
         """
-        with session_scope(self.credentials_filename) as session:
+        with session_scope(self.credentials_str) as session:
             # Check if ID already exist
             datasets = session.query(DataSet) \
                 .filter(DataSet.dataset_serial == self.dataset_serial).all()
@@ -161,7 +161,7 @@ class DatabaseOperations:
         :param str parent_dataset: Assign parent if not null
         """
         # Create session
-        with session_scope(self.credentials_filename) as session:
+        with session_scope(self.credentials_str) as session:
             # Check if ID already exist
             print("dataset id", self.dataset_serial)
             datasets = session.query(DataSet) \
@@ -230,7 +230,7 @@ class DatabaseOperations:
         :param str parent_dataset: Assign parent if not null
         """
         # Create session
-        with session_scope(self.credentials_filename) as session:
+        with session_scope(self.credentials_str) as session:
             # Check if ID already exist
             datasets = session.query(DataSet) \
                 .filter(DataSet.dataset_serial == self.dataset_serial).all()
@@ -269,7 +269,7 @@ class DatabaseOperations:
         :return list of strs file_names: List of file names for given dataset
         """
         # Create session
-        with session_scope(self.credentials_filename) as session:
+        with session_scope(self.credentials_str) as session:
             # Check if ID already exist
             dataset = session.query(DataSet) \
                    .filter(DataSet.dataset_serial == self.dataset_serial).one()
@@ -444,7 +444,7 @@ class DatabaseOperations:
         :return dataframe frames_meta: Metadata for each frame
         """
         # Create session
-        with session_scope(self.credentials_filename) as session:
+        with session_scope(self.credentials_str) as session:
             # Check if ID already exist
             dataset = session.query(DataSet) \
                    .filter(DataSet.dataset_serial == self.dataset_serial).one()

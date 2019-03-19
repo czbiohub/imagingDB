@@ -1,8 +1,11 @@
 import nose.tools
 import os
 import unittest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 import imaging_db.database.db_session as db_session
+import imaging_db.metadata.json_validator as json_validator
 
 
 def test_json_to_uri():
@@ -33,13 +36,23 @@ class DBSession(unittest.TestCase):
     """
 
     def setUp(self):
-
         # Get path to example DB credentials file which can be used to connect
         # to postgres Docker container
         dir_name = os.path.dirname(__file__)
         self.cred_path = os.path.realpath(
             os.path.join(dir_name, '../../db_credentials.json'),
         )
+        credentials_json = json_validator.read_json_file(
+            json_filename=self.cred_path,
+            schema_name="CREDENTIALS_SCHEMA",
+        )
+        self.credentials_str = db_session.json_to_uri(credentials_json)
+        # Create database
+        self.engine = create_engine(self.credentials_str)
+        self.connection = self.engine.connect()
+        self.transaction = self.connection.begin()
+        db_session.Base.metadata.create_all(self.connection)
+
         self.dataset_serial = 'TEST-2005-10-09-20-00-00-0001'
         db_inst = db_session.DatabaseOperations(
             credentials_filename=self.cred_path,
@@ -68,10 +81,16 @@ class DBSession(unittest.TestCase):
         )
         print('after insert')
 
+    def tearDown(self):
+        # Roll back the top level transaction and disconnect from the database
+        self.transaction.rollback()
+        self.connection.close()
+        self.engine.dispose()
+
     @nose.tools.raises(AssertionError)
     def test_assert_not_unique_id(self):
         test_inst = db_session.DatabaseOperations(
             credentials_filename=self.cred_path,
             dataset_serial='TEST-2005-10-09-20-00-00-0001',
         )
-        # test_inst.assert_unique_id()
+        test_inst.assert_unique_id()
