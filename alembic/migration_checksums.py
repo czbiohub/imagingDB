@@ -4,7 +4,7 @@ import argparse
 import os
 
 import imaging_db.filestorage.s3_storage as s3_storage
-import imaging_db.database.db_session as db_session
+import imaging_db.database.db_operations as db_ops
 import imaging_db.utils.meta_utils as meta_utils
 
 
@@ -36,8 +36,8 @@ def migrate_db(credentials_filename):
     os.makedirs(dest_dir, exist_ok=True)
 
     # Get files and compute checksums
-    with db_session.session_scope(credentials_str) as session:
-        files = session.query(db_session.FileGlobal)
+    with db_ops.session_scope(credentials_str) as session:
+        files = session.query(db_ops.FileGlobal)
         for file in files:
             if file.sha256 is None:
                 data_loader = s3_storage.DataStorage(
@@ -54,8 +54,8 @@ def migrate_db(credentials_filename):
                 file.sha256 = checksum
 
     # Get frames and compute checksums
-    with db_session.session_scope(credentials_filename) as session:
-        frames = session.query(db_session.Frames)
+    with db_ops.session_scope(credentials_filename) as session:
+        frames = session.query(db_ops.Frames)
         for frame in frames:
             if frame.sha256 is None:
                 data_loader = s3_storage.DataStorage(

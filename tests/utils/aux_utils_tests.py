@@ -4,6 +4,21 @@ import imaging_db.utils.aux_utils as aux_utils
 import imaging_db.utils.meta_utils as meta_utils
 
 
+def test_json_to_uri():
+    credentials_json = {
+        "drivername": "postgres",
+        "username": "user",
+        "password": "pwd",
+        "host": "db_host",
+        "port": 666,
+        "dbname": "db_name"
+    }
+    expected_str = "postgres://user:pwd@db_host:666/db_name"
+
+    credentials_str = aux_utils.json_to_uri(credentials_json)
+    nose.tools.assert_equal(credentials_str, expected_str)
+
+
 def test_parse_ml_name():
     file_name = '/Volumes/MicroscopyData/p6A1_1_CTRL1_PyProcessed.tif'
     meta_json = aux_utils.parse_ml_name(file_name)

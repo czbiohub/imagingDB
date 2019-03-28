@@ -4,26 +4,11 @@ import unittest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-import imaging_db.database.db_session as db_session
-import imaging_db.metadata.json_validator as json_validator
+import imaging_db.database.db_operations as db_ops
+import imaging_db.metadata.json_operations as json_ops
+import imaging_db.utils.aux_utils as aux_utils
 
-
-def test_json_to_uri():
-    credentials_json = {
-        "drivername": "postgres",
-        "username": "user",
-        "password": "pwd",
-        "host": "db_host",
-        "port": 666,
-        "dbname": "db_name"
-    }
-    expected_str = "postgres://user:pwd@db_host:666/db_name"
-
-    credentials_str = db_session.json_to_uri(credentials_json)
-    nose.tools.assert_equal(credentials_str, expected_str)
-
-
-class DBSession(unittest.TestCase):
+class TestDBTransactions(unittest.TestCase):
     """
     These tests require that you run a postgres Docker container
     which you can connect to and create a temporary database on.
@@ -42,19 +27,19 @@ class DBSession(unittest.TestCase):
         self.cred_path = os.path.realpath(
             os.path.join(dir_name, '../../db_credentials.json'),
         )
-        credentials_json = json_validator.read_json_file(
+        credentials_json = json_ops.read_json_file(
             json_filename=self.cred_path,
             schema_name="CREDENTIALS_SCHEMA",
         )
-        self.credentials_str = db_session.json_to_uri(credentials_json)
+        self.credentials_str = aux_utils.json_to_uri(credentials_json)
         # Create database
         self.engine = create_engine(self.credentials_str)
         self.connection = self.engine.connect()
         self.transaction = self.connection.begin()
-        db_session.Base.metadata.create_all(self.connection)
+        db_ops.Base.metadata.create_all(self.connection)
 
         self.dataset_serial = 'TEST-2005-10-09-20-00-00-0001'
-        db_inst = db_session.DatabaseOperations(
+        db_inst = db_ops.DatabaseOperations(
             credentials_filename=self.cred_path,
             dataset_serial=self.dataset_serial,
         )
@@ -89,7 +74,7 @@ class DBSession(unittest.TestCase):
 
     @nose.tools.raises(AssertionError)
     def test_assert_not_unique_id(self):
-        test_inst = db_session.DatabaseOperations(
+        test_inst = db_ops.DatabaseOperations(
             credentials_filename=self.cred_path,
             dataset_serial='TEST-2005-10-09-20-00-00-0001',
         )

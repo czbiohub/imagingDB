@@ -4,8 +4,8 @@ import os
 from sqlalchemy import engine_from_config, pool
 from logging.config import fileConfig
 
-import imaging_db.database.db_session as db_session
-import imaging_db.metadata.json_validator as json_validator
+import imaging_db.database.db_operations as db_ops
+import imaging_db.metadata.json_operations as json_ops
 
 
 # Edit this depending on where your database credential file is stored
@@ -19,18 +19,18 @@ DB_CREDENTIALS_PATH = os.path.join(dir_name, 'db_credentials.json')
 config = context.config
 
 # Overwrite the ini-file sqlalchemy.url path
-credentials_json = json_validator.read_json_file(
+credentials_json = json_ops.read_json_file(
     json_filename=DB_CREDENTIALS_PATH,
     schema_name="CREDENTIALS_SCHEMA")
 
 config.set_main_option(
     'sqlalchemy.url',
-    db_session.json_to_uri(credentials_json=credentials_json))
+    db_ops.json_to_uri(credentials_json=credentials_json))
 
 print("Using url:", config.get_main_option('sqlalchemy.url'))
 
 # Add model metadata object
-target_metadata = db_session.Base.metadata
+target_metadata = db_ops.Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
