@@ -15,7 +15,6 @@ install:
 services:
   - postgresql
 before_script:
-  - psql -c "create database imaging_test;" -U postgres
   - sudo -u postgres psql -c "CREATE USER username WITH PASSWORD 'password';" -U postgres
   - sudo -u postgres psql -c "ALTER ROLE testuser SUPERUSER"
 script:
