@@ -89,6 +89,9 @@ def upload_data_and_update_db(args):
 
     # Get database connection URI
     db_connection = db_utils.get_connection_str()
+    # Make sure we can connect to the database
+    with db_ops.session_scope(db_connection) as session:
+        db_ops.test_connection(session)
 
     # Read and validate config json
     config_json = json_ops.read_json_file(
@@ -113,28 +116,10 @@ def upload_data_and_update_db(args):
 
     if upload_type == 'frames':
         # If upload type is frames, check from frames format
-        if 'frames_format' in config_json:
-            frames_format = config_json['frames_format']
-        else:
-            # Set default to ome_tiff
-            frames_format = 'ome_tiff'
-        assert frames_format in {'ome_tiff', 'ome_tif', 'tiff', 'tif_folder', 'tif_id'}, \
-            ("frames_format should be 'ome_tiff', 'tif_folder' or 'tif_id'",
-             "not {}".format(frames_format))
-        class_dict = {'ome_tiff': 'OmeTiffSplitter',
-                      'tif_folder': 'TifFolderSplitter',
-                      'tif_id': 'TifIDSplitter',
-                      'tiff': 'OmeTiffSplitter',
-                      'ome_tif': 'OmeTiffSplitter'}
-        module_dict = {'ome_tiff': 'images.ometif_splitter',
-                      'tif_folder': 'images.tiffolder_splitter',
-                      'tif_id': 'images.tif_id_splitter',
-                      'tiff': 'images.ometif_splitter',
-                      'ome_tif': 'images.ometif_splitter'}
-        # Dynamically import class
-        splitter_class = aux_utils.import_class(
-            module_dict[frames_format],
-            class_dict[frames_format],
+        assert 'frames_format' in config_json, \
+            'You must specify the type of file(s)'
+        splitter_class = aux_utils.get_splitter_class(
+            config_json['frames_format'],
         )
 
     # Create the progress bar object
@@ -156,16 +141,10 @@ def upload_data_and_update_db(args):
             s3_dir = "/".join([FRAME_FOLDER_NAME, dataset_serial])
         else:
             s3_dir = "/".join([FILE_FOLDER_NAME, dataset_serial])
-
-        # First, make sure we can instantiate and connect to the database
-        try:
-            db_inst = db_ops.DatabaseOperations(
-                dataset_serial=dataset_serial,
-            )
-            with db_ops.session_scope(db_connection) as session:
-                db_inst.test_connection(session)
-        except Exception as e:
-            raise e
+        # Instantiate database operations class
+        db_inst = db_ops.DatabaseOperations(
+            dataset_serial=dataset_serial,
+        )
         # Make sure dataset is not already in database
         if not args.override:
             db_inst.assert_unique_id()
@@ -180,6 +159,9 @@ def upload_data_and_update_db(args):
                 description = row.description
 
         if upload_type == "frames":
+            if not args.override:
+                with db_ops.session_scope(db_connection) as session:
+                    db_inst.assert_unique_id(session)
             # Instantiate splitter class
             frames_inst = splitter_class(
                 data_path=row.file_name,
@@ -227,6 +209,8 @@ def upload_data_and_update_db(args):
             )
             if not args.override:
                 data_uploader.assert_unique_id()
+                with db_ops.session_scope(db_connection) as session:
+                    db_inst.assert_unique_id(session)
             try:
                 data_uploader.upload_file(file_name=row.file_name)
                 print("File {} uploaded to S3".format(row.file_name))

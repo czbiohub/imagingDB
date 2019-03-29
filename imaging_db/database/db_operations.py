@@ -39,6 +39,19 @@ def session_scope(credentials_str, echo_sql=False):
         session.close()
 
 
+def test_connection(session):
+    """
+    Test that you can connect to the database
+
+    :raise Exception: if you can't log in
+    """
+    try:
+        session.execute('SELECT 1')
+    except Exception as e:
+        print("Can't connect to database", e)
+        raise ConnectionError
+
+
 class DatabaseOperations:
     """Class handling standard input and output database operations"""
 
@@ -47,18 +60,6 @@ class DatabaseOperations:
         :param dataset_serial: Unique dataset identifier
         """
         self.dataset_serial = dataset_serial
-
-    def test_connection(self, session):
-        """
-        Test that you can connect to the database
-
-        :raise Exception: if you can't log in
-        """
-        try:
-            session.execute('SELECT 1')
-        except Exception as e:
-            print("Can't connect to database", e)
-            raise
 
     def assert_unique_id(self, session):
         """
@@ -97,12 +98,12 @@ class DatabaseOperations:
                     .filter(DataSet.dataset_serial == parent_dataset).one()
                 parent_key = parent.id
             except Exception as e:
-                print("Parent {} not found for data set {}".format(
+                print("Parent {} not found for data set {}. {}".format(
                     parent_dataset,
                     self.dataset_serial,
+                    e,
                 ))
-                print(e)
-                raise
+                raise ValueError
         return parent_key
 
     def insert_frames(self,
