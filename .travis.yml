@@ -1,20 +1,20 @@
 language: python
 sudo: true
 python:
-  - 3.6
-env:
-  - PGPORT=5433
+  - 3.7
 before_install:
   - export BOTO_CONFIG=/dev/null
   - export AWS_SECRET_ACCESS_KEY=foobar_secret
   - export AWS_ACCESS_KEY_ID=foobar_key
-  - sudo -u postgres psql -c "CREATE USER username WITH PASSWORD 'password'"
-  - sudo -u postgres psql -c "ALTER ROLE username SUPERUSER"
 install:
   - pip install coverage
   - pip install -r requirements.txt
 services:
   - postgres
+before_script:
+  - psql -c 'create database imaging_test;' -U postgres
+  - sudo -u postgres psql -c "CREATE USER username WITH PASSWORD 'password'"
+  - sudo -u postgres psql -c "ALTER ROLE username SUPERUSER"
 script:
   - nosetests -v --with-coverage --cover-package=imaging_db/
 notifications:

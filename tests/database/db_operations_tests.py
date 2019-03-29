@@ -21,7 +21,8 @@ class TestDBTransactions(unittest.TestCase):
     def setUp(self):
         # Credentials URI which can be used to connect
         # to postgres Docker container
-        self.credentials_str = 'postgres://username:password@localhost:5433/test'
+        self.credentials_str = \
+            'postgres://username:password@localhost:5433/imaging_test'
         # Create database connection
         self.Session = sessionmaker()
         self.engine = create_engine(self.credentials_str)
