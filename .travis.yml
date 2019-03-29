@@ -5,6 +5,10 @@ python:
 env:
   global:
     - PGPORT=5433
+    - PGDATABASE=imaging_test
+    - PGUSER=username
+    - PGPASSWORD='password'
+    - PGHOST=localhost
 before_install:
   - export BOTO_CONFIG=/dev/null
   - export AWS_SECRET_ACCESS_KEY=foobar_secret
@@ -14,9 +18,6 @@ install:
   - pip install -r requirements.txt
 services:
   - postgresql
-before_script:
-  - sudo -u postgres psql -c "CREATE USER username WITH PASSWORD 'password';" -U postgres
-  - sudo -u postgres psql -c "ALTER ROLE testuser SUPERUSER"
 script:
   - nosetests -v --with-coverage --cover-package=imaging_db/
 notifications:
