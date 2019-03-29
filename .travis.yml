@@ -2,6 +2,15 @@ language: python
 python:
   - 3.6
 sudo: true
+services:
+  - postgresql
+addons:
+  postgresql: '10'
+  apt:
+    packages:
+      - postgresql-10-postgis-2.4
+      - postgresql-10-postgis-2.4-scripts
+      - postgresql-client-10
 env:
   global:
   - PGPORT=5433
@@ -18,15 +27,6 @@ before_install:
 install:
   - pip install coverage
   - pip install -r requirements.txt
-services:
-  - postgresql
-addons:
-  postgresql: '10'
-  apt:
-    packages:
-      - postgresql-10-postgis-2.4
-      - postgresql-10-postgis-2.4-scripts
-      - postgresql-client-10
 script:
   - nosetests -v --with-coverage --cover-package=imaging_db/
 notifications:
