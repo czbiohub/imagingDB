@@ -2,11 +2,11 @@ language: python
 python:
   - 3.6
 sudo: true
-services:
-  - postgresql
 env:
   global:
   - PGPORT=5433
+services:
+  - postgresql
 before_install:
   - export BOTO_CONFIG=/dev/null
   - export AWS_SECRET_ACCESS_KEY=foobar_secret
