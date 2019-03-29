@@ -15,8 +15,8 @@ install:
   - pip install coverage
   - pip install -r requirements.txt
 before_script:
-  - psql -c "CREATE DATABASE imaging_test;" -U postgres
-  - psql -c "CREATE USER username WITH PASSWORD 'password';" -U postgres
+  - psql -c 'create database imaging_test;' -U postgres
+  - psql -c "create user username with password 'password';" -U postgres
 script:
   - nosetests -v --with-coverage --cover-package=imaging_db/
 notifications:
