@@ -8,7 +8,7 @@ nose
 numpy
 opencv-python
 pandas
-psycopg2
+psycopg2-binary
 testfixtures
 tifffile
 sqlalchemy
