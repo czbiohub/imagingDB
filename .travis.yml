@@ -10,8 +10,9 @@ install:
   - pip install coverage
   - pip install -r requirements.txt
 services:
-  - postgres
+  - postgresql
 before_script:
+  - psql -c 'create database imaging_test;' -U postgres
   - sudo -u postgres psql -c "CREATE USER username WITH PASSWORD 'password'"
   - sudo -u postgres psql -c "ALTER ROLE username SUPERUSER"
 script:
