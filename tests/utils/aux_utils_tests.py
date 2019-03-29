@@ -1,8 +1,20 @@
+import inspect
 import nose.tools
 
 import imaging_db.utils.aux_utils as aux_utils
 import imaging_db.utils.meta_utils as meta_utils
 
+
+def test_import_class():
+    module_name = 'images.ometif_splitter'
+    class_name = 'OmeTiffSplitter'
+    class_inst = aux_utils.import_class(module_name, class_name)
+    nose.tools.assert_true(inspect.isclass(class_inst))
+
+
+def test_get_splitter_class():
+    frames_format = 'tiff_folder'
+    class_inst =
 
 def test_parse_ml_name():
     file_name = '/Volumes/MicroscopyData/p6A1_1_CTRL1_PyProcessed.tif'
