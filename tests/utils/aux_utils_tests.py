@@ -10,11 +10,15 @@ def test_import_class():
     class_name = 'OmeTiffSplitter'
     class_inst = aux_utils.import_class(module_name, class_name)
     nose.tools.assert_true(inspect.isclass(class_inst))
+    nose.tools.assert_equal(class_inst.__name__, 'OmeTiffSplitter')
 
 
 def test_get_splitter_class():
     frames_format = 'tiff_folder'
-    class_inst =
+    class_inst = aux_utils.get_splitter_class(frames_format)
+    nose.tools.assert_true(inspect.isclass(class_inst))
+    nose.tools.assert_equal(class_inst.__name__, 'TifFolderSplitter')
+
 
 def test_parse_ml_name():
     file_name = '/Volumes/MicroscopyData/p6A1_1_CTRL1_PyProcessed.tif'

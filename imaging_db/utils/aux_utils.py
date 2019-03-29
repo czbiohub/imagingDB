@@ -37,7 +37,9 @@ def get_splitter_class(frames_format):
                              'ome_tif',
                              'tiff',
                              'tif_folder',
-                             'tif_id'}, \
+                             'tiff_folder',
+                             'tif_id',
+                             'tiff_id'}, \
         ("frames_format should be 'ome_tiff', 'tif_folder' or 'tif_id'",
          "not {}".format(frames_format))
 
