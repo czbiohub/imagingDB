@@ -22,11 +22,13 @@ before_install:
   - export BOTO_CONFIG=/dev/null
   - export AWS_SECRET_ACCESS_KEY=foobar_secret
   - export AWS_ACCESS_KEY_ID=foobar_key
-  - sudo -u postgres psql -c "CREATE USER username WITH PASSWORD 'password'"
-  - sudo -u postgres psql -c "ALTER ROLE username SUPERUSER"
 install:
   - pip install coverage
   - pip install -r requirements.txt
+before_script:
+  - sudo -u postgres psql -c 'createdb imaging_test;' -U postgres
+  - sudo -u postgres psql -c "CREATE USER username WITH PASSWORD 'password'"
+  - sudo -u postgres psql -c "ALTER ROLE username SUPERUSER"
 script:
   - nosetests -v --with-coverage --cover-package=imaging_db/
 notifications:
