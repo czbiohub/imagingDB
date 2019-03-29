@@ -3,23 +3,22 @@ sudo: required
   - 3.6
 env:
   global:
-    - PGPORT=5433
-    - PGDATABASE=imaging_test
-    - PGUSER=username
-    - PGPASSWORD='password'
-    - PGHOST=localhost
+  - PGPORT=5433
+  - PGDATABASE=imaging_test
+  - PGUSER=username
+  - PGPASSWORD='password'
+  - PGHOST=localhost
 before_install:
   - export BOTO_CONFIG=/dev/null
   - export AWS_SECRET_ACCESS_KEY=foobar_secret
   - export AWS_ACCESS_KEY_ID=foobar_key
-  - sudo sed -i -e '/local.*peer/s/postgres/all/' -e 's/peer\|md5/trust/g' /etc/postgresql/*/main/pg_hba.conf
-  - sudo service postgresql restart
-  - sleep 1
 install:
   - pip install coverage
   - pip install -r requirements.txt
 services:
   - postgresql
+before_script:
+  - psql -c 'create database imaging_test;' -U postgres -p 5433
 script:
   - nosetests -v --with-coverage --cover-package=imaging_db/
 notifications:
