@@ -4,10 +4,19 @@ python:
 sudo: true
 services:
   - postgresql
+addons:
+  postgresql: "10"
+  apt:
+    packages:
+    - postgresql-10
+    - postgresql-client-10
 env:
   global:
   - PGPORT=5433
 before_install:
+  - sudo sed -i -e '/local.*peer/s/postgres/all/' -e 's/peer\|md5/trust/g' /etc/postgresql/*/main/pg_hba.conf
+  - sudo service postgresql restart
+  - sleep 1
   - export BOTO_CONFIG=/dev/null
   - export AWS_SECRET_ACCESS_KEY=foobar_secret
   - export AWS_ACCESS_KEY_ID=foobar_key
