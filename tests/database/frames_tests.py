@@ -1,19 +1,13 @@
-import unittest
-
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+import tests.database.db_basetest as db_basetest
 
 import imaging_db.database.dataset as dataset
 import imaging_db.database.frames as frames
 import imaging_db.database.frames_global as frames_global
 
 
-class TestFrames(unittest.TestCase):
+class TestFrames(db_basetest.DBBaseTest):
     def setUp(self):
-        self.engine = create_engine('sqlite:///:memory:')
-        Session = sessionmaker(bind=self.engine)
-        self.session = Session()
-        frames.Base.metadata.create_all(self.engine)
+        super().setUp()
 
         self.dataset = dataset.DataSet(
             dataset_serial='TEST-2010-01-01-10-00-00-0001',
@@ -51,7 +45,7 @@ class TestFrames(unittest.TestCase):
         self.session.commit()
 
     def tearDown(self):
-        frames.Base.metadata.drop_all(self.engine)
+        super().tearDown()
 
     def test_frames(self):
         expected = [self.frames]
