@@ -68,6 +68,7 @@ def validate_global_meta(global_meta):
     assert np.all(keys_valid),\
         "Not all required metadata keys are present"
 
+
 def gen_sha256(image):
     """
     Generate the sha-256 hash of an image. If the user

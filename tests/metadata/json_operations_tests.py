@@ -4,7 +4,7 @@ import nose.tools
 import os
 from testfixtures import TempDirectory
 
-import imaging_db.metadata.json_validator as json_validator
+import imaging_db.metadata.json_operations as json_ops
 
 
 def test_valid_json():
@@ -18,13 +18,13 @@ def test_valid_json():
             "dbname": "db_name"
         }
         tempdir.write('valid_json_file.json', json.dumps(valid_json).encode())
-        json_object = json_validator.read_json_file(
+        json_object = json_ops.read_json_file(
             os.path.join(tempdir.path, "valid_json_file.json"),
             schema_name="CREDENTIALS_SCHEMA")
         nose.tools.assert_equal(json_object, valid_json)
 
 
-@nose.tools.raises(json.JSONDecodeError)
+@nose.tools.raises(ValueError)
 def test_not_a_json():
     with TempDirectory() as tempdir:
         invalid_json = {
@@ -34,7 +34,7 @@ def test_not_a_json():
         # Remove last bracket
         invalid_json_str = json.dumps(invalid_json)[:-1]
         tempdir.write('invalid_json_file.json', invalid_json_str.encode())
-        json_object = json_validator.read_json_file(
+        json_object = json_ops.read_json_file(
             os.path.join(tempdir.path, "invalid_json_file.json"))
 
 
@@ -48,7 +48,7 @@ def test_invalid_json():
         "port": "notanumber",
         "dbname": "db_name"
     }
-    json_validator.validate_schema(
+    json_ops.validate_schema(
         invalid_json,
         schema="CREDENTIALS_SCHEMA")
 
@@ -61,7 +61,7 @@ def test_valid_micrometa():
         "Exposure-ms": 50,
         'COM1-DataBits': '8'
     }
-    json_validator.validate_schema(
+    json_ops.validate_schema(
         micrometa_json,
         schema="MICROMETA_SCHEMA")
 
@@ -72,7 +72,7 @@ def test_invalid_micrometa():
         "ChannelIndex": 4,
         'COM1-DataBits': '8'
     }
-    json_validator.validate_schema(
+    json_ops.validate_schema(
         micrometa_json,
         schema="MICROMETA_SCHEMA")
 
@@ -83,12 +83,41 @@ def test_not_a_schema():
         "drivername": "postgres",
         "username": "user"
     }
-    json_validator.validate_schema(
+    json_ops.validate_schema(
         json_obj,
         schema="NOTA_SCHEMA")
 
 
+@nose.tools.raises(AssertionError)
+def test_bad_schema():
+    json_obj = {
+        "drivername": "postgres",
+        "username": "user"
+    }
+    json_ops.validate_schema(
+        json_obj,
+        schema=3)
+
+
 @nose.tools.raises(FileNotFoundError)
 def test_nonexisting_json():
-    json_object = json_validator.read_json_file("not_a_json_file.json")
+    json_ops.read_json_file("not_a_json_file.json")
 
+
+def test_str2json():
+    expected_json = {
+        "ChannelIndex": 4,
+        'COM1-DataBits': '8'
+    }
+    json_obj = json_ops.str2json(json.dumps(expected_json))
+    nose.tools.assert_dict_equal(json_obj, expected_json)
+
+
+@nose.tools.raises(ValueError)
+def test_str2json_bad_json():
+    json_ops.str2json('This is not a json')
+
+
+@nose.tools.raises(ValueError)
+def test_get_global_json():
+    json_ops.get_global_json([], 'file_name')

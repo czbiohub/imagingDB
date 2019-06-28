@@ -1,5 +1,4 @@
 import boto3
-import json
 from moto import mock_s3
 import nose.tools
 import numpy as np
@@ -8,6 +7,7 @@ import os
 from testfixtures import TempDirectory
 import tifffile
 import unittest
+from unittest.mock import patch
 
 import imaging_db.images.tif_id_splitter as tif_id_splitter
 import imaging_db.utils.image_utils as im_utils
@@ -74,12 +74,42 @@ class TestTifIDSplitter(unittest.TestCase):
         nose.tools.assert_equal(self.frames_inst.bit_depth, 'uint16')
         nose.tools.assert_equal(self.frames_inst.im_colors, 1)
 
+    def test_set_frame_info_uint8(self):
+        frames = tifffile.TiffFile(self.file_path)
+        page = frames.pages[0]
+        page.tags["BitsPerSample"].value = 8
+        self.frames_inst.set_frame_info(page)
+        self.assertEqual(self.frames_inst.bit_depth, 'uint8')
+
+    def test_set_frame_info_float_to_int(self):
+        frames = tifffile.TiffFile(self.file_path)
+        page = frames.pages[0]
+        page.tags["BitsPerSample"].value = 32
+        float2uint = self.frames_inst.set_frame_info(page)
+        self.assertEqual(self.frames_inst.bit_depth, 'uint16')
+        self.assertTrue(float2uint)
+
+    @nose.tools.raises(ValueError)
+    def test_set_frame_info_invalid_depth(self):
+        frames = tifffile.TiffFile(self.file_path)
+        page = frames.pages[0]
+        page.tags["BitsPerSample"].value = 5
+        self.frames_inst.set_frame_info(page)
+
     def test_get_params_from_string(self):
         indices = self.frames_inst._get_params_from_str(self.description)
         nose.tools.assert_equal(indices['nbr_channels'], self.nbr_channels)
         nose.tools.assert_equal(indices['nbr_slices'], self.nbr_slices)
         nose.tools.assert_equal(indices['nbr_timepoints'], 1)
         nose.tools.assert_equal(indices['nbr_positions'], 1)
+
+    def test_get_params_from_string_frames_pos(self):
+        description = 'ImageJ=1.52e\nimages=6\nframes=3\npositions=4\nmax=10411.0'
+        indices = self.frames_inst._get_params_from_str(description)
+        nose.tools.assert_equal(indices['nbr_channels'], 1)
+        nose.tools.assert_equal(indices['nbr_slices'], 1)
+        nose.tools.assert_equal(indices['nbr_timepoints'], 3)
+        nose.tools.assert_equal(indices['nbr_positions'], 4)
 
     def test_get_frames_and_meta(self):
         # Expected uploaded im names, channels indices should increment before
@@ -102,6 +132,16 @@ class TestTifIDSplitter(unittest.TestCase):
             # Assert that contents are the same
             nose.tools.assert_equal(im.dtype, np.uint16)
             numpy.testing.assert_array_equal(im, self.im[i, ...])
+
+    @patch('imaging_db.images.tif_id_splitter.TifIDSplitter.set_frame_info')
+    def test_get_frames_and_meta_no_parser(self, set_mock_info):
+        set_mock_info.return_value = True
+        self.frames_inst.get_frames_and_metadata()
+        self.assertDictEqual(
+            self.frames_inst.global_json,
+            {'file_origin': self.file_path},
+        )
+        self.assertEqual(self.frames_inst.bit_depth, 'uint16')
 
     def test_generate_hash(self):
         expected_hash = [

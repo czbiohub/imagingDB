@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 import imaging_db.filestorage.s3_storage as s3_storage
 import imaging_db.images.file_splitter as file_splitter
-import imaging_db.metadata.json_validator as json_validator
+import imaging_db.metadata.json_operations as json_ops
 import imaging_db.utils.meta_utils as meta_utils
 
 
@@ -44,19 +44,20 @@ class OmeTiffSplitter(file_splitter.FileSplitter):
         :param page page: Page read from tifffile
         """
         self.frame_shape = [page.tags["ImageLength"].value,
-                       page.tags["ImageWidth"].value]
-        # Encode color channel information
+                            page.tags["ImageWidth"].value]
+        # Set image color channel info
         self.im_colors = 1
-        if len(self.frame_shape) == 3:
-            self.im_colors = self.frame_shape[2]
         bits_val = page.tags["BitsPerSample"].value
+        if isinstance(bits_val, tuple):
+            # This means it's not a grayscale image
+            self.im_colors = len(bits_val)
+            bits_val = bits_val[0]
         if bits_val == 16:
             self.bit_depth = "uint16"
         elif bits_val == 8:
             self.bit_depth = "uint8"
         else:
-            print("Bit depth must be 16 or 8, not {}".format(bits_val))
-            raise ValueError
+            raise ValueError("Bit depth must be 16 or 8, not {}".format(bits_val))
 
     def split_file(self, file_path, schema_filename):
         """
@@ -70,7 +71,6 @@ class OmeTiffSplitter(file_splitter.FileSplitter):
         """
         frames = tifffile.TiffFile(file_path)
         # Get global metadata
-        page = frames.pages[0]
         nbr_frames = len(frames.pages)
         # Create image stack with image bit depth 16 or 8
         im_stack = np.empty((self.frame_shape[0],
@@ -80,7 +80,7 @@ class OmeTiffSplitter(file_splitter.FileSplitter):
                             dtype=self.bit_depth)
 
         # Get metadata schema
-        meta_schema = json_validator.read_json_file(schema_filename)
+        meta_schema = json_ops.read_json_file(schema_filename)
         # Convert frames to numpy stack and collect metadata
         # Separate structured metadata (with known fields)
         # from unstructured, the latter goes into frames_json
@@ -91,7 +91,7 @@ class OmeTiffSplitter(file_splitter.FileSplitter):
             page = frames.pages[i]
             im_stack[..., i] = np.atleast_3d(page.asarray())
             # Get dict with metadata from json schema
-            json_i, meta_i = json_validator.get_metadata_from_tags(
+            json_i, meta_i = json_ops.get_metadata_from_tags(
                 page=page,
                 meta_schema=meta_schema,
                 validate=True,
@@ -150,6 +150,8 @@ class OmeTiffSplitter(file_splitter.FileSplitter):
         if os.path.isfile(self.data_path):
             # Run through processing only once
             file_paths = [self.data_path]
+            # Only one file so don't consider positions
+            positions = []
         else:
             # Get position files in the folder
             file_paths = glob.glob(os.path.join(self.data_path, "*.ome.tif"))
@@ -157,7 +159,9 @@ class OmeTiffSplitter(file_splitter.FileSplitter):
                 "Can't find ome.tifs in {}".format(self.data_path)
             # Parse positions
             if isinstance(positions, str):
-                positions = json_validator.str2json(positions)
+                positions = json_ops.str2json(positions)
+                if isinstance(positions, int):
+                    positions = [positions]
 
         # Read first file to find available positions
         frames = tifffile.TiffFile(file_paths[0])
@@ -166,7 +170,7 @@ class OmeTiffSplitter(file_splitter.FileSplitter):
         # Set frame info. This should not vary between positions
         self.set_frame_info(page)
         # IJMetadata only exists in first frame, so that goes into global json
-        self.global_json = json_validator.get_global_json(
+        self.global_json = json_ops.get_global_json(
             page=page,
             file_name=self.data_path,
         )

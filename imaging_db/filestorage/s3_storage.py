@@ -5,6 +5,8 @@ import os
 
 import imaging_db.utils.image_utils as im_utils
 
+S3_BUCKET_NAME = "czbiohub-imaging"
+
 
 class DataStorage:
     """Class for handling data uploads to S3"""
@@ -16,7 +18,7 @@ class DataStorage:
         :param str s3_dir: Folder name in S3 bucket
         :param int nbr_workers: Number of workers for uploads/downloads
         """
-        self.bucket_name = "czbiohub-imaging"
+        self.bucket_name = S3_BUCKET_NAME
         self.s3_client = boto3.client('s3')
         self.s3_dir = s3_dir
         self.nbr_workers = nbr_workers
@@ -237,7 +239,6 @@ class DataStorage:
         with concurrent.futures.ThreadPoolExecutor(self.nbr_workers) as ex:
             {ex.submit(self.download_file, file_name, dest_dir):
                 file_name for file_name in file_names}
-
 
     def download_file(self, file_name, dest_dir):
         """

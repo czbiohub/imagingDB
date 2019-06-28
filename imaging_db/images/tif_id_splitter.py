@@ -5,7 +5,7 @@ import tifffile
 
 import imaging_db.filestorage.s3_storage as s3_storage
 import imaging_db.images.file_splitter as file_splitter
-import imaging_db.utils.aux_utils as aux_utils
+import imaging_db.images.filename_parsers as file_parsers
 import imaging_db.utils.meta_utils as meta_utils
 
 
@@ -131,12 +131,12 @@ class TifIDSplitter(file_splitter.FileSplitter):
         )
         # Get global json metadata
         if filename_parser is not None:
-            parse_func = getattr(aux_utils, filename_parser)
+            parse_func = getattr(file_parsers, filename_parser)
             self.global_json = parse_func(self.data_path)
         else:
             self.global_json = {}
         self.global_json["file_origin"] = self.data_path
-
+        print('float', float2uint)
         # Convert frames to numpy stack and collect metadata
         self.frames_meta = meta_utils.make_dataframe(nbr_frames=nbr_frames)
         self.frames_json = []
@@ -153,8 +153,7 @@ class TifIDSplitter(file_splitter.FileSplitter):
             try:
                 im = page.asarray()
             except ValueError as e:
-                print("Can't read page ", i, self.data_path)
-                raise e
+                raise ValueError("Can't read page ", i, self.data_path)
 
             if float2uint:
                 assert im.max() < 65536, "Im > 16 bit, max: {}".format(im.max())

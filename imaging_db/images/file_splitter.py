@@ -135,17 +135,6 @@ class FileSplitter(metaclass=ABCMeta):
         }
         meta_utils.validate_global_meta(self.global_meta)
 
-    def upload_data(self, file_names):
-        try:
-            # Upload stack frames to S3
-            self.data_uploader.upload_frames(
-                file_names=file_names,
-                im_stack=self.im_stack,
-            )
-        except AssertionError as e:
-            print("Project already on S3, moving on to DB entry")
-            print(e)
-
     @abstractmethod
     def set_frame_info(self):
         """

@@ -94,12 +94,10 @@ def read_json_file(json_filename, schema_name=None):
         with open(json_filename, "r") as read_file:
             try:
                 json_object = json.load(read_file)
-            except json.JSONDecodeError as jsone:
-                print(jsone)
-                raise
+            except json.JSONDecodeError as e:
+                raise ValueError("Can't read json {}".format(json_filename))
     except FileNotFoundError as e:
-        print(e)
-        raise
+        raise FileNotFoundError("{} not found. {}".format(json_filename, e))
     # Validate schema
     if schema_name is not None:
         validate_schema(json_object, schema_name)
@@ -130,8 +128,9 @@ def str2json(json_str):
     try:
         json_object = json.loads(json_str)
     except json.JSONDecodeError as e:
-        print("Invalid string to json conversion: {}, e: {}", json_str, e)
-        raise
+        raise ValueError(
+            "Invalid string to json conversion: {}, e: {}".format(json_str, e),
+        )
     return json_object
 
 
@@ -184,6 +183,6 @@ def get_global_json(page, file_name):
             meta_temp = json.loads(meta_temp)
         global_json["IJMetadata"] = meta_temp
     except Exception as e:
-        print("Can't read IJMetadata", e)
+        raise ValueError("Can't read IJMetadata from page. {}".format(e))
 
     return global_json

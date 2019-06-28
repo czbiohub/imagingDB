@@ -9,13 +9,14 @@ from imaging_db.database.base import Base
 
 class FileGlobal(Base):
     """
-    Table for files that are uploaded to S3 as is, most likely
-    as a stack in some proprietary microscopy file format
+    Table for files that are uploaded to S3 as is, without being read
+    or have its contents verified in any way
     """
     __tablename__ = 'file_global'
 
     id = Column(Integer, primary_key=True)
     s3_dir = Column(String)
+    file_name = Column(String)
     # Add potential to throw whatever metadata they want
     # in a JSONB object
     metadata_json = Column(JSONB)
@@ -25,8 +26,9 @@ class FileGlobal(Base):
     data_set = relationship("DataSet",
                             backref=backref("file_global", uselist=False))
 
-    def __init__(self, s3_dir, metadata_json, data_set, sha256):
+    def __init__(self, s3_dir, file_name, metadata_json, data_set, sha256):
         self.s3_dir = s3_dir
+        self.file_name = file_name
         self.metadata_json = metadata_json
         self.data_set = data_set
         self.sha256 = sha256

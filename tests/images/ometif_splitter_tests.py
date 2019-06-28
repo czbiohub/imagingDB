@@ -126,7 +126,20 @@ class TestOmeTiffSplitter(unittest.TestCase):
         expected_shape = [self.im.shape[0], self.im.shape[1]]
         nose.tools.assert_equal(self.frames_inst.frame_shape, expected_shape)
         nose.tools.assert_equal(self.frames_inst.bit_depth, 'uint16')
-        nose.tools.assert_equal(self.frames_inst.im_colors, 1)
+
+    def test_set_frame_info_uint8(self):
+        frames = tifffile.TiffFile(self.file_path1)
+        page = frames.pages[0]
+        page.tags["BitsPerSample"].value = 8
+        self.frames_inst.set_frame_info(page)
+        self.assertEqual(self.frames_inst.bit_depth, 'uint8')
+
+    @nose.tools.raises(ValueError)
+    def test_set_frame_info_invalid_depth(self):
+        frames = tifffile.TiffFile(self.file_path1)
+        page = frames.pages[0]
+        page.tags["BitsPerSample"].value = 5
+        self.frames_inst.set_frame_info(page)
 
     def test_split_file(self):
         # Test splitting file with position idx 3
@@ -171,6 +184,10 @@ class TestOmeTiffSplitter(unittest.TestCase):
             positions=postions,
             glob_paths=file_paths,
         )
+        self.assertListEqual(
+            found_paths,
+            [self.file_path1, self.file_path3],
+        )
 
     def test_generate_hash(self):
         expected_hash = [
@@ -180,3 +197,28 @@ class TestOmeTiffSplitter(unittest.TestCase):
 
         sha = self.frames_inst.frames_meta.sha256.tolist()
         nose.tools.assert_equal(expected_hash, sha)
+
+    def test_get_frames_and_metadata_file_nopositions(self):
+        im = np.ones((10, 15, 3), dtype=np.uint16)
+        # Metadata
+        mmmetadata = self._get_mmmeta()
+        ijmeta = self._get_ijmeta()
+        # Save test ome tif file
+        file_path_col = os.path.join(self.temp_path, "test_col_Pos1.ome.tif")
+        extra_tags = [('MicroManagerMetadata', 's', 0, mmmetadata, True)]
+        tifffile.imsave(file_path_col,
+                        im,
+                        ijmetadata=ijmeta,
+                        extratags=extra_tags,
+                        )
+        frames_inst = ometif_splitter.OmeTiffSplitter(
+            data_path=file_path_col,
+            s3_dir="raw_frames/ISP-2005-06-09-20-00-00-0002",
+            override=False,
+            file_format=".png",
+        )
+        # Upload data
+        frames_inst.get_frames_and_metadata(
+            schema_filename=self.schema_file_path,
+        )
+        self.assertEqual(frames_inst.im_colors, 3)

@@ -3,10 +3,11 @@
 import argparse
 import os
 
-import imaging_db.utils.cli_utils as cli_utils
-import imaging_db.database.db_session as db_session
+import imaging_db.database.db_operations as db_ops
 import imaging_db.filestorage.s3_storage as s3_storage
-import imaging_db.metadata.json_validator as json_validator
+import imaging_db.metadata.json_operations as json_ops
+import imaging_db.utils.cli_utils as cli_utils
+import imaging_db.utils.db_utils as db_utils
 
 
 def parse_args():
@@ -116,7 +117,6 @@ def download_data(args):
     # Create output directory as a subdirectory in args.dest named
     # dataset_serial. It stops if the subdirectory already exists to avoid
     # the risk of overwriting existing data
-
     dest_dir = os.path.join(args.dest, dataset_serial)
     try:
         os.makedirs(dest_dir, exist_ok=False)
@@ -124,12 +124,15 @@ def download_data(args):
         raise FileExistsError(
             "Folder {} already exists, {}".format(dest_dir, e))
 
+    # Get database connection URI
+    db_connection = db_utils.get_connection_str(args.login)
     # Instantiate database class
     try:
-        db_inst = db_session.DatabaseOperations(
-            credentials_filename=args.login,
+        db_inst = db_ops.DatabaseOperations(
             dataset_serial=dataset_serial,
         )
+        with db_ops.session_scope(db_connection) as session:
+            db_ops.test_connection(session)
     except Exception as e:
         raise IOError("Can't instantiate DB: {}".format(e))
 
@@ -137,7 +140,10 @@ def download_data(args):
         # Just download file(s)
         assert args.download,\
             "You set metadata *and* download to False. You get nothing."
-        s3_dir, file_names = db_inst.get_filenames()
+        with db_ops.session_scope(db_connection) as session:
+            s3_dir, file_names = db_inst.get_filenames(
+                session=session,
+            )
     else:
         # Get all the slicing args and recast as tuples
         if args.positions is None:
@@ -167,19 +173,20 @@ def download_data(args):
             slices = tuple(args.slices)
 
         # Get the metadata from the requested frames
-        global_meta, frames_meta = db_inst.get_frames_meta(
-            pos=pos,
-            times=times,
-            channels=channels,
-            slices=slices,
-        )
-
+        with db_ops.session_scope(db_connection) as session:
+            global_meta, frames_meta = db_inst.get_frames_meta(
+                session=session,
+                pos=pos,
+                times=times,
+                channels=channels,
+                slices=slices,
+            )
         # Write global metadata to destination directory
         global_meta_filename = os.path.join(
             dest_dir,
             "global_metadata.json",
         )
-        json_validator.write_json_file(
+        json_ops.write_json_file(
             meta_dict=global_meta,
             json_filename=global_meta_filename,
         )

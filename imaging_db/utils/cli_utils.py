@@ -1,4 +1,4 @@
-def validate_id(id_str, check_letters=False):
+def validate_id(id_str):
     """
     Assert that the ID follows the naming convention
     <ID>-YYYY-MM-DD-HH-MM-SS-<SSSS>.
@@ -14,17 +14,13 @@ def validate_id(id_str, check_letters=False):
     substrs = id_str.split("-")
     assert len(substrs) == 8, \
         "ID should have format <ID>-YYYY-MM-DD-HH-MM-SS-<SSSS>"
-    if check_letters:
-        assert substrs[0] in {"ISP", "ML"}, \
-            "Project ID ({}) doesn't match existing IDs (ISP, ML)" \
-            .format(substrs[0])
     assert len(substrs[1]) == 4, \
         "Year should consist of 4 letters, not {}".format(substrs[1])
     units = ["Month", "Day", "Hour", "Minute", "Second"]
     for t in range(2, 7):
         assert len(substrs[t]) == 2, \
-        "{} should consist of 2 letters, not {}".format(units[t - 2],
-                                                        substrs[t])
+            "{} should consist of 2 letters, not {}".format(units[t - 2],
+                                                            substrs[t])
     assert 1 <= int(substrs[2]) <= 12, \
         "Month should be 1-12, {}".format(substrs[2])
     assert 1 <= int(substrs[3]) <= 31, \

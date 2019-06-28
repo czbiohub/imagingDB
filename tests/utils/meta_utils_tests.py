@@ -57,6 +57,12 @@ def test_gen_sha256_numpy():
     sha = meta_utils.gen_sha256(im)
     nose.tools.assert_equal(expected_sha, sha)
 
+
+@nose.tools.raises(TypeError)
+def test_gen_sha256_invalid_input():
+    meta_utils.gen_sha256(5)
+
+
 def test_gen_sha256_file():
     expected_sha = 'af87894cc23928df908b02bd94842d063a5c7aae9eb1bbc2bb5c9475d674bcba'
 

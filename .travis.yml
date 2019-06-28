@@ -1,15 +1,38 @@
 language: python
 python:
   - 3.6
+sudo: true
+services:
+  - postgresql
+addons:
+  postgresql: "10"
+  apt:
+    packages:
+    - postgresql-10
+    - postgresql-client-10
+env:
+  global:
+  - PGPORT=5433
+services:
+  - postgresql
 before_install:
+  - sudo sed -i -e '/local.*peer/s/postgres/all/' -e 's/peer\|md5/trust/g' /etc/postgresql/*/main/pg_hba.conf
+  - sudo service postgresql restart
+  - sleep 1
   - export BOTO_CONFIG=/dev/null
   - export AWS_SECRET_ACCESS_KEY=foobar_secret
   - export AWS_ACCESS_KEY_ID=foobar_key
 install:
   - pip install coverage
+  - pip install codecov
   - pip install -r requirements.txt
+before_script:
+  - psql -c 'create database imaging_test;' -U postgres
+  - psql -c "create user imaging_user with password 'imaging_passwd';" -U postgres
 script:
   - nosetests -v --with-coverage --cover-package=imaging_db/
+after_success:
+  - codecov
 notifications:
   email:
     recipients:

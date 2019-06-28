@@ -1,4 +1,5 @@
 import nose.tools
+import numpy as np
 import unittest
 from unittest.mock import patch
 
@@ -29,6 +30,11 @@ class TestFileSplitter(unittest.TestCase):
     @nose.tools.raises(AssertionError)
     def test_get_imstack(self):
         self.mock_inst.get_imstack()
+
+    def test_get_existing_imstack(self):
+        self.mock_inst.im_stack = np.zeros((5, 10))
+        im_stack = self.mock_inst.get_imstack()
+        self.assertTupleEqual(im_stack.shape, (5, 10))
 
     @nose.tools.raises(AssertionError)
     def test_get_global_meta(self):
@@ -87,3 +93,11 @@ class TestFileSplitter(unittest.TestCase):
     @nose.tools.raises(AssertionError)
     def test_missing_meta(self):
         self.mock_inst.set_global_meta(nbr_frames=666)
+
+    @nose.tools.raises(NotImplementedError)
+    def test_set_frame_info(self):
+        self.mock_inst.set_frame_info()
+
+    @nose.tools.raises(NotImplementedError)
+    def test_get_frames_and_metadata(self):
+        self.mock_inst.get_frames_and_metadata()

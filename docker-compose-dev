@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+  dev_db:
+    image: postgres
+    container_name: imaging_dev_db
+    environment:
+      POSTGRES_DB: imaging_dev
+      POSTGRES_USER: imaging_user
+      POSTGRES_PASSWORD: imaging_passwd
+    ports:
+      - "5432:5432"
+
+  test_db:
+    image: postgres
+    container_name: imaging_test_db
+    environment:
+      POSTGRES_DB: imaging_test
+      POSTGRES_USER: imaging_user
+      POSTGRES_PASSWORD: imaging_passwd
+    ports:
+      - "5433:5432"
