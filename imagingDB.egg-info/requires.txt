@@ -1,0 +1,15 @@
+awscli
+boto3
+ffmpeg
+jsonschema
+moto
+natsort
+nose
+numpy
+opencv-python
+pandas
+psycopg2-binary
+testfixtures
+tifffile==0.15.1
+sqlalchemy
+tqdm
