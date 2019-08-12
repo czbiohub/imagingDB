@@ -7,7 +7,8 @@ module_path = os.path.abspath(os.path.join('../../'))
 if module_path not in sys.path:
     sys.path.append(module_path)
 
-import imaging_db.database.db_session as db_session
+import imaging_db.utils.db_utils as db_utils
+import imaging_db.database.db_operations as db_ops
 
 from .view import QtBrowser
 
@@ -28,7 +29,8 @@ class DatasetBrowser:
     """
     def __init__(self, credentials):
 
-        self.credentials = credentials
+        credentials_str = db_utils.get_connection_str(credentials)
+        self.credentials = credentials_str
 
         self._qt = QtBrowser(self)
         
@@ -48,9 +50,9 @@ class DatasetBrowser:
             self._qt.set_table_item(row, 3, QTableWidgetItem(d.description))
             
     def _get_datasets(self):
-        with db_session.session_scope(self.credentials) as session:
-            self.datasets = session.query(db_session.DataSet)
-            self.frames_global = session.query(db_session.FramesGlobal).join(db_session.DataSet)
+        with db_ops.session_scope(self.credentials) as session:
+            self.datasets = session.query(db_ops.DataSet)
+            self.frames_global = session.query(db_ops.FramesGlobal).join(db_ops.DataSet)
 
     def _filter_datasets(self, search_string='*'):
 
@@ -61,7 +63,7 @@ class DatasetBrowser:
         else:
             formatted_string = '%{0}%'.format(search_string)
 
-        self.current_datasets = self.datasets.filter(db_session.DataSet.dataset_serial.ilike(formatted_string))
+        self.current_datasets = self.datasets.filter(db_ops.DataSet.dataset_serial.ilike(formatted_string))
 
         self.num_datasets = self.current_datasets.count()
 
@@ -77,8 +79,8 @@ class DatasetBrowser:
     def _table_selection_changed(self):
         _, serial = self._qt.get_table_selection()
 
-        self.current_frame = self.frames_global.filter(db_session.DataSet.dataset_serial == serial).first()
-        selected_dataset = self.datasets.filter(db_session.DataSet.dataset_serial == serial).first()
+        self.current_frame = self.frames_global.filter(db_ops.DataSet.dataset_serial == serial).first()
+        selected_dataset = self.datasets.filter(db_ops.DataSet.dataset_serial == serial).first()
 
         microscope = selected_dataset.microscope
         parent_key = str(selected_dataset.parent_id)
