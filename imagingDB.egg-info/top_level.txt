@@ -1,3 +1,0 @@
-imaging_db
-notebooks
-tests
