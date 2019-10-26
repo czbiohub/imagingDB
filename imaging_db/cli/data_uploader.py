@@ -157,7 +157,8 @@ def upload_data_and_update_db(csv,
 
         # Get S3 directory based on upload type
         if upload_type == "frames":
-            storage_dir = "/".join([FRAME_FOLDER_NAME, dataset_serial])
+            #storage_dir = "/".join([FRAME_FOLDER_NAME, dataset_serial])
+            storage_dir = os.path.sep.join([FRAME_FOLDER_NAME, dataset_serial])
         else:
             storage_dir = "/".join([FILE_FOLDER_NAME, dataset_serial])
         # Instantiate database operations class
@@ -195,11 +196,16 @@ def upload_data_and_update_db(csv,
                 positions = row['positions']
                 if not pd.isna(positions):
                     kwargs['positions'] = positions
+            if 'roi' in row:
+                roi = row['roi']
+                if not pd.isna(roi):
+                    kwargs['roi'] = roi
             if 'schema_filename' in config_json:
                 kwargs['schema_filename'] = config_json['schema_filename']
             if 'filename_parser' in config_json:
                 filename_parser = config_json['filename_parser']
                 kwargs['filename_parser'] = filename_parser
+
             # Extract metadata and split file into frames
             frames_inst.get_frames_and_metadata(**kwargs)
 

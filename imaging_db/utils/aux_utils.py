@@ -37,12 +37,14 @@ def get_splitter_class(frames_format):
                              'tif_folder',
                              'tiff_folder',
                              'tif_id',
-                             'tiff_id'}, \
+                             'tiff_id',
+                             'slide_explorer'}, \
         ("frames_format should be 'ome_tiff', 'tif_folder' or 'tif_id'",
          "not {}".format(frames_format))
 
     class_dict = {'ome_tiff': 'OmeTiffSplitter',
                   'ome_tif': 'OmeTiffSplitter',
+                  'slide_explorer': 'SlideExplorerSplitter',
                   'tif_folder': 'TifFolderSplitter',
                   'tiff_folder': 'TifFolderSplitter',
                   'tif_id': 'TifIDSplitter',
@@ -51,6 +53,7 @@ def get_splitter_class(frames_format):
                   }
     module_dict = {'ome_tiff': 'images.ometif_splitter',
                    'ome_tif': 'images.ometif_splitter',
+                   'slide_explorer': 'images.slide_explorer_splitter',
                    'tif_folder': 'images.tiffolder_splitter',
                    'tiff_folder': 'images.tiffolder_splitter',
                    'tif_id': 'images.tif_id_splitter',

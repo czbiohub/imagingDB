@@ -115,7 +115,8 @@ class LocalStorage(data_storage.DataStorage):
         (im_path, im) = path_im_tuple
         if self.nonexistent_storage_path(im_path):
             os.makedirs(self.id_storage_path, exist_ok=True)
-            cv2.imwrite(im_path, im)
+            check = cv2.imwrite(im_path, im)
+            print(check)
         else:
             print("File {} already exists.".format(im_path))
 

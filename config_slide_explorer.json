@@ -1,0 +1,8 @@
+{
+    "upload_type": "frames",
+    "frames_format": "slide_explorer",
+    "microscope": "",
+    "schema_filename": "C:\\Users\\InSituScope\\Documents\\imagingDB\\metadata_schema.json",
+    "storage": "local",
+    "storage_access": "Y:\\czbiohub-imaging"
+}

@@ -4,5 +4,5 @@
     "microscope": "",
     "schema_filename": "metadata_schema.json",
     "storage": "local",
-    "storage_access": "/Volumes/data_lg/czbiohub-imaging/"
+    "storage_access": "Y:\\czbiohub-imaging"
 }
