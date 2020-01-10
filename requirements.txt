@@ -9,6 +9,7 @@ numpy
 opencv-python
 pandas
 psycopg2-binary
+PyQt5>=5.10.1
 testfixtures
 tifffile==0.15.1
 sqlalchemy
